@@ -1,0 +1,127 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        // Connection string to your SQL Server database
+        string connectionString = "Your_Connection_String_Here";
+
+        // Create two DataTables to represent the source and destination data
+        DataTable sourceDataTable = new DataTable();
+        DataTable destinationDataTable = new DataTable();
+
+        // Fill the source and destination DataTables with data (you can load data from your source)
+        // For this example, we'll manually create sample data
+        sourceDataTable.Columns.Add("ID", typeof(int));
+        sourceDataTable.Columns.Add("Name", typeof(string));
+
+        sourceDataTable.Rows.Add(1, "John");
+        sourceDataTable.Rows.Add(2, "Alice");
+        sourceDataTable.Rows.Add(3, "Bob");
+
+        destinationDataTable.Columns.Add("ID", typeof(int));
+        destinationDataTable.Columns.Add("Name", typeof(string));
+
+        destinationDataTable.Rows.Add(1, "John");
+        destinationDataTable.Rows.Add(3, "Charlie");
+
+        // Find rows to insert and update
+        DataTable rowsToInsert = GetRowsToInsert(sourceDataTable, destinationDataTable);
+        DataTable rowsToUpdate = GetRowsToUpdate(sourceDataTable, destinationDataTable);
+
+        // Insert new rows
+        foreach (DataRow row in rowsToInsert.Rows)
+        {
+            InsertRowIntoDatabase(connectionString, "YourTable", row);
+        }
+
+        // Update existing rows
+        foreach (DataRow row in rowsToUpdate.Rows)
+        {
+            UpdateRowInDatabase(connectionString, "YourTable", row);
+        }
+
+        Console.WriteLine("Data comparison and operations completed.");
+    }
+
+    // Function to get rows to insert
+    static DataTable GetRowsToInsert(DataTable source, DataTable destination)
+    {
+        DataTable rowsToInsert = new DataTable();
+        rowsToInsert = source.Clone();
+
+        foreach (DataRow sourceRow in source.Rows)
+        {
+            int id = (int)sourceRow["ID"];
+            DataRow[] matchingRows = destination.Select("ID = " + id);
+
+            if (matchingRows.Length == 0)
+            {
+                rowsToInsert.ImportRow(sourceRow);
+            }
+        }
+
+        return rowsToInsert;
+    }
+
+    // Function to get rows to update
+    static DataTable GetRowsToUpdate(DataTable source, DataTable destination)
+    {
+        DataTable rowsToUpdate = new DataTable();
+        rowsToUpdate = source.Clone();
+
+        foreach (DataRow sourceRow in source.Rows)
+        {
+            int id = (int)sourceRow["ID"];
+            DataRow[] matchingRows = destination.Select("ID = " + id);
+
+            if (matchingRows.Length > 0)
+            {
+                DataRow destinationRow = matchingRows[0];
+                if (!DataRowComparer.Default.Equals(sourceRow, destinationRow))
+                {
+                    rowsToUpdate.ImportRow(sourceRow);
+                }
+            }
+        }
+
+        return rowsToUpdate;
+    }
+
+    // Function to insert a row into the database
+    static void InsertRowIntoDatabase(string connectionString, string tableName, DataRow row)
+    {
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            string insertQuery = $"INSERT INTO {tableName} (ID, Name) VALUES (@ID, @Name)";
+            SqlCommand insertCommand = new SqlCommand(insertQuery, connection);
+
+            insertCommand.Parameters.AddWithValue("@ID", row["ID"]);
+            insertCommand.Parameters.AddWithValue("@Name", row["Name"]);
+
+            insertCommand.ExecuteNonQuery();
+        }
+    }
+
+    // Function to update a row in the database
+    static void UpdateRowInDatabase(string connectionString, string tableName, DataRow row)
+    {
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            string updateQuery = $"UPDATE {tableName} SET Name = @Name WHERE ID = @ID";
+            SqlCommand updateCommand = new SqlCommand(updateQuery, connection);
+
+            updateCommand.Parameters.AddWithValue("@ID", row["ID"]);
+            updateCommand.Parameters.AddWithValue("@Name", row["Name"]);
+
+            updateCommand.ExecuteNonQuery();
+        }
+    }
+}
