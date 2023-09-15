@@ -1,0 +1,103 @@
+// Usage example
+string sqlServerConnectionString = "YourSQLServerConnectionString";
+string oracleConnectionString = "YourOracleConnectionString";
+
+using (IDatabaseWriterWithTransaction sqlServerWriter = new SQLServerDatabaseWriterWithTransaction(sqlServerConnectionString))
+using (IDatabaseWriterWithTransaction oracleWriter = new OracleDatabaseWriterWithTransaction(oracleConnectionString))
+{
+    try
+    {
+        sqlServerWriter.BeginTransaction();
+        oracleWriter.BeginTransaction();
+
+        // Writing data to SQL Server with a transaction
+        sqlServerWriter.WriteDataWithTransaction("Data for SQL Server");
+
+        // Writing data to Oracle with a transaction
+        oracleWriter.WriteDataWithTransaction("Data for Oracle");
+
+        // Commit the transactions if all operations succeed
+        sqlServerWriter.CommitTransaction();
+        oracleWriter.CommitTransaction();
+    }
+    catch (Exception ex)
+    {
+        // Rollback the transactions if an error occurs
+        sqlServerWriter.RollbackTransaction();
+        oracleWriter.RollbackTransaction();
+
+        // Handle the error
+        Console.WriteLine("Error: " + ex.Message);
+    }
+}
+
+
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+public class SQLServerDatabaseWriterWithTransaction : IDatabaseWriterWithTransaction
+{
+    private readonly string connectionString;
+    private SqlConnection connection;
+    private SqlTransaction transaction;
+
+    public SQLServerDatabaseWriterWithTransaction(string connectionString)
+    {
+        this.connectionString = connectionString;
+    }
+
+    public void BeginTransaction()
+    {
+        connection = new SqlConnection(connectionString);
+        connection.Open();
+        transaction = connection.BeginTransaction();
+    }
+
+    public void CommitTransaction()
+    {
+        transaction.Commit();
+        connection.Close();
+    }
+
+    public void RollbackTransaction()
+    {
+        transaction.Rollback();
+        connection.Close();
+    }
+
+    public void WriteDataWithTransaction(string data)
+    {
+        using (SqlCommand command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = "INSERT INTO YourSqlServerTable (ColumnName) VALUES (@data)";
+            command.Parameters.AddWithValue("@data", data);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (transaction != null)
+            transaction.Dispose();
+        if (connection != null)
+            connection.Dispose();
+    }
+}
+
+
+
+
+
+public interface IDatabaseWriterWithTransaction : IDisposable
+{
+    void BeginTransaction();
+    void CommitTransaction();
+    void RollbackTransaction();
+    void WriteDataWithTransaction(string data);
+}
+
+
+
+
