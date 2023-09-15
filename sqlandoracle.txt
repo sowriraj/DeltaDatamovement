@@ -1,0 +1,64 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
+
+public partial class InsertData : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        string sqlServerConnectionString = "Server=YourSqlServerServer;Database=YourSqlServerDatabase;User Id=YourSqlServerUsername;Password=YourSqlServerPassword;";
+        string oracleConnectionString = "User Id=YourOracleUsername;Password=YourOraclePassword;Data Source=YourOracleDataSource;";
+
+        // Data to be inserted
+        string dataToInsert = "Sample Data";
+
+        // Create SQL Server connection and Oracle connection
+        using (SqlConnection sqlConnection = new SqlConnection(sqlServerConnectionString))
+        using (OracleConnection oracleConnection = new OracleConnection(oracleConnectionString))
+        {
+            sqlConnection.Open();
+            oracleConnection.Open();
+
+            // Create a transaction for both connections
+            using (SqlTransaction sqlTransaction = sqlConnection.BeginTransaction())
+            using (OracleTransaction oracleTransaction = oracleConnection.BeginTransaction())
+            {
+                try
+                {
+                    // Insert data into SQL Server
+                    using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                    {
+                        sqlCommand.Transaction = sqlTransaction;
+                        sqlCommand.CommandText = "INSERT INTO YourSqlServerTable (ColumnName) VALUES (@data)";
+                        sqlCommand.Parameters.AddWithValue("@data", dataToInsert);
+                        sqlCommand.ExecuteNonQuery();
+                    }
+
+                    // Insert data into Oracle
+                    using (OracleCommand oracleCommand = oracleConnection.CreateCommand())
+                    {
+                        oracleCommand.Transaction = oracleTransaction;
+                        oracleCommand.CommandText = "INSERT INTO YourOracleTable (ColumnName) VALUES (:data)";
+                        oracleCommand.Parameters.Add("data", OracleDbType.Varchar2).Value = dataToInsert;
+                        oracleCommand.ExecuteNonQuery();
+                    }
+
+                    // Commit the transaction if all operations succeed
+                    sqlTransaction.Commit();
+                    oracleTransaction.Commit();
+
+                    Response.Write("Data inserted into both databases successfully.");
+                }
+                catch (Exception ex)
+                {
+                    // Rollback the transaction if an error occurs
+                    sqlTransaction.Rollback();
+                    oracleTransaction.Rollback();
+
+                    Response.Write("Error inserting data: " + ex.Message);
+                }
+            }
+        }
+    }
+}
