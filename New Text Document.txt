@@ -11,7 +11,10 @@
         <button type="submit" class="btn btn-primary">Copy to Clipboard</button>
     </form>
     <div class="mt-3">
-        <p id="copySuccessMessage" class="alert alert-success d-none"></p>
+        <div id="copySuccessMessage" class="alert alert-success alert-dismissible fade show d-none" role="alert">
+            Copied to Clipboard!
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     </div>
 </div>
 
@@ -26,7 +29,6 @@
         document.execCommand('copy');
         document.body.removeChild(tempInput);
         var copySuccessMessage = document.getElementById('copySuccessMessage');
-        copySuccessMessage.innerText = 'Copied to Clipboard!';
         copySuccessMessage.classList.remove('d-none');
     });
 </script>
