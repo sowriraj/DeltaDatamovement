@@ -1,0 +1,22 @@
+@page
+@model RazorPageWithClipboard.Pages.CopyToClipboardModel
+
+<div>
+    <p id="textToCopy">Text to be copied: @Model.TextToCopy</p>
+    <button id="copyButton" onclick="copyToClipboard()">Copy to Clipboard</button>
+</div>
+
+<script>
+    function copyToClipboard() {
+        var textToCopy = document.getElementById('textToCopy').innerText;
+        var tempInput = document.createElement('input');
+        tempInput.value = textToCopy;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        var copyButton = document.getElementById('copyButton');
+        copyButton.innerText = 'Copied!';
+    }
+</script>
