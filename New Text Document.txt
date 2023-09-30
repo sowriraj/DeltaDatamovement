@@ -1,22 +1,32 @@
 @page
 @model RazorPageWithClipboard.Pages.CopyToClipboardModel
+@using RazorPageWithClipboard.Models
 
-<div>
-    <p id="textToCopy">Text to be copied: @Model.TextToCopy</p>
-    <button id="copyButton" onclick="copyToClipboard()">Copy to Clipboard</button>
+<div class="container mt-5">
+    <form method="post">
+        <div class="form-group">
+            <label asp-for="UserInput.InputText"></label>
+            <input asp-for="UserInput.InputText" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-primary">Copy to Clipboard</button>
+    </form>
+    <div class="mt-3">
+        <p id="copySuccessMessage" class="alert alert-success d-none"></p>
+    </div>
 </div>
 
 <script>
-    function copyToClipboard() {
-        var textToCopy = document.getElementById('textToCopy').innerText;
+    document.querySelector('form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var inputText = document.getElementById('UserInput_InputText').value;
         var tempInput = document.createElement('input');
-        tempInput.value = textToCopy;
+        tempInput.value = inputText;
         document.body.appendChild(tempInput);
         tempInput.select();
         document.execCommand('copy');
         document.body.removeChild(tempInput);
-
-        var copyButton = document.getElementById('copyButton');
-        copyButton.innerText = 'Copied!';
-    }
+        var copySuccessMessage = document.getElementById('copySuccessMessage');
+        copySuccessMessage.innerText = 'Copied to Clipboard!';
+        copySuccessMessage.classList.remove('d-none');
+    });
 </script>
