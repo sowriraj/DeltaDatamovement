@@ -1,47 +1,42 @@
-<div class="container mt-5">
-    <form method="post">
-        <div class="form-group">
-            <label asp-for="UserInput.InputText"></label>
-            <input id="inputText" asp-for="UserInput.InputText" class="form-control" />
-        </div>
-        <button type="submit" class="btn btn-primary">Copy to Clipboard</button>
-    </form>
-    <div class="mt-3">
-        <div id="copySuccessMessage" class="alert alert-success alert-dismissible fade show d-none" role="alert">
-            Copied to Clipboard!
-            <button id="closeButton" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </div>
-</div>
-
 <script>
-    document.getElementById('inputText').addEventListener('input', function () {
-        // Handle input changes, if necessary
-    });
-
-    document.querySelector('form').addEventListener('submit', function (e) {
+    document.getElementById('yourForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        var inputText = document.getElementById('inputText').value;
-        var tempInput = document.createElement('input');
-        tempInput.value = inputText;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempInput);
-
-        var copySuccessMessage = document.getElementById('copySuccessMessage');
-        copySuccessMessage.classList.remove('d-none', 'fade');
-        setTimeout(function() {
-            copySuccessMessage.classList.add('fade');
-            setTimeout(function() {
-                copySuccessMessage.classList.add('d-none');
-            }, 1000);
-        }, 3000);
-    });
-
-    document.getElementById('closeButton').addEventListener('click', function (event) {
-        event.preventDefault(); // Prevent default close behavior
-        var copySuccessMessage = document.getElementById('copySuccessMessage');
-        copySuccessMessage.classList.add('d-none', 'fade');
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: '@Url.Page("YourPage")',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                // Update the form fields with the received response
+                document.getElementById('InputField').value = response.inputField; // Assuming 'inputField' is the property name in your model
+                
+                // You can update other form fields similarly
+            }
+        });
     });
 </script>
+public class YourPageModel : PageModel
+{
+    [BindProperty]
+    public YourFormModel InputModel { get; set; }
+
+    public void OnGet()
+    {
+        // Code to execute when the page is first loaded
+    }
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        // Your asynchronous logic here
+        // Access form data using InputModel.InputField
+        
+        // Example: Simulate asynchronous work with Task.Delay
+        await Task.Delay(2000); // Simulate a delay of 2 seconds
+
+        // Return the same model as the response
+        return new JsonResult(InputModel);
+    }
+}
