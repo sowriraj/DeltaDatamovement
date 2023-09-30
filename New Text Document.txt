@@ -23,5 +23,6 @@
         event.preventDefault(); // Prevent default close behavior
         var copySuccessMessage = document.getElementById('copySuccessMessage');
         copySuccessMessage.classList.add('d-none');
+        copySuccessMessage.classList.remove('show'); // Manually remove 'show' class
     });
 </script>
