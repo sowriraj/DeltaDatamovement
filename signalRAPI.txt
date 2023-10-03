@@ -1,0 +1,109 @@
+public class TodoHub : Hub
+{
+    public async Task SendTodoUpdate(List<Todo> todos)
+    {
+        await Clients.All.SendAsync("ReceiveTodoUpdate", todos);
+    }
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    // ... other configurations
+
+    services.AddSignalR();
+    services.AddSingleton<TodoDbHelper>(_ => new TodoDbHelper(Configuration.GetConnectionString("DefaultConnection")));
+}
+
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+{
+    // ... other configurations
+
+    app.UseEndpoints(endpoints =>
+    {
+        endpoints.MapHub<TodoHub>("/todoHub");
+        endpoints.MapControllers();
+    });
+}
+
+
+
+public class TodoDbHelper
+{
+    private readonly string _connectionString;
+
+    public TodoDbHelper(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    public async Task<List<Todo>> GetTodosAsync()
+    {
+        // Implement fetching todos from the database
+    }
+
+    public async Task<int> AddTodoAsync(Todo todo)
+    {
+        // Implement adding a todo to the database
+    }
+
+    public async Task<int> UpdateTodoAsync(Todo todo)
+    {
+        // Implement updating a todo in the database
+    }
+
+    public async Task<int> DeleteTodoAsync(int todoId)
+    {
+        // Implement deleting a todo from the database
+    }
+}
+
+
+
+[ApiController]
+[Route("api/[controller]")]
+public class TodoController : ControllerBase
+{
+    private readonly TodoDbHelper _dbHelper;
+    private readonly IHubContext<TodoHub> _hubContext;
+
+    public TodoController(TodoDbHelper dbHelper, IHubContext<TodoHub> hubContext)
+    {
+        _dbHelper = dbHelper;
+        _hubContext = hubContext;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<Todo>>> GetTodos()
+    {
+        var todos = await _dbHelper.GetTodosAsync();
+        return Ok(todos);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<Todo>> AddTodo([FromBody] Todo todo)
+    {
+        await _dbHelper.AddTodoAsync(todo);
+        var todos = await _dbHelper.GetTodosAsync();
+        await _hubContext.Clients.All.SendAsync("ReceiveTodoUpdate", todos);
+        return Ok(todo);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTodo(int id, [FromBody] Todo todo)
+    {
+        todo.Id = id;
+        await _dbHelper.UpdateTodoAsync(todo);
+        var todos = await _dbHelper.GetTodosAsync();
+        await _hubContext.Clients.All.SendAsync("ReceiveTodoUpdate", todos);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTodo(int id)
+    {
+        await _dbHelper.DeleteTodoAsync(id);
+        var todos = await _dbHelper.GetTodosAsync();
+        await _hubContext.Clients.All.SendAsync("ReceiveTodoUpdate", todos);
+        return NoContent();
+    }
+}

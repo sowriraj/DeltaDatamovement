@@ -1,0 +1,85 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import * as signalR from "@microsoft/signalr";
+import { BehaviorSubject } from 'rxjs';
+import { Todo } from './todo.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class TodoService {
+  private hubConnection: signalR.HubConnection;
+  private apiUrl = 'https://your-api-url/api/todo'; // Replace with your API endpoint URL
+  private todosSubject = new BehaviorSubject<Todo[]>([]);
+
+  constructor(private http: HttpClient) {
+    this.hubConnection = new signalR.HubConnectionBuilder()
+      .withUrl('https://your-api-url/todoHub') // Replace with your SignalR hub URL
+      .build();
+
+    this.hubConnection.start().catch(err => console.error(err));
+
+    this.hubConnection.on('ReceiveTodoUpdate', (todos: Todo[]) => {
+      this.todosSubject.next(todos);
+    });
+  }
+
+  getTodos() {
+    return this.http.get<Todo[]>(this.apiUrl);
+  }
+
+  addTodo(todo: Todo) {
+    return this.http.post<Todo>(this.apiUrl, todo);
+  }
+
+  updateTodo(todo: Todo) {
+    const url = `${this.apiUrl}/${todo.id}`;
+    return this.http.put(url, todo);
+  }
+
+  deleteTodo(id: number) {
+    const url = `${this.apiUrl}/${id}`;
+    return this.http.delete(url);
+  }
+
+  getTodosObservable() {
+    return this.todosSubject.asObservable();
+  }
+}
+
+export interface Todo {
+  id: number;
+  task: string;
+  isCompleted: boolean;
+}
+
+
+
+import { Component, OnInit } from '@angular/core';
+import { TodoService } from './todo.service';
+
+@Component({
+  selector: 'app-todo-list',
+  template: `
+    <ul>
+      <li *ngFor="let todo of todos$ | async">
+        {{ todo.task }}
+      </li>
+    </ul>
+  `
+})
+export class TodoListComponent implements OnInit {
+  todos$ = this.todoService.getTodosObservable();
+
+  constructor(private todoService: TodoService) {}
+
+  ngOnInit() {
+    this.todoService.getTodos().subscribe(todos => {
+      // Initial todos data
+      this.todos$.next(todos);
+    });
+  }
+}
+
+
+
