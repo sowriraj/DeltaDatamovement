@@ -1,0 +1,48 @@
+using System;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+using Kerberos.NET;
+using Kerberos.NET.Credentials;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        var connectionString = "Server=sql-server.example.com;Database=YourDatabase;Integrated Security=True;";
+
+        var kerbClient = new KerberosClient();
+
+        // Replace 'keytabfile.keytab' with the path to your keytab file
+        var keytab = new KeyTable("keytabfile.keytab");
+        kerbClient.DefaultUpnRealm = keytab.Realms.Realm;
+        kerbClient.LoadKeyTable(keytab);
+
+        var sqlServerServicePrincipal = "MSSQLSvc/sql-server.example.com:1433";
+
+        var credentials = new KerberosPasswordCredential(sqlServerServicePrincipal);
+        var token = await kerbClient.RequestTgt(credentials);
+        var apReq = await kerbClient.GetServiceTicket(token, sqlServerServicePrincipal);
+
+        // Use Kerberos ticket to establish a SQL Server connection
+        using (var connection = new SqlConnection(connectionString))
+        {
+            try
+            {
+                await connection.OpenAsync();
+
+                // Connection is open, perform SQL operations here
+
+                Console.WriteLine("Connected to SQL Server!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+}
+
+
+
+dotnet add package System.Data.SqlClient
+dotnet add package Kerberos.NET
