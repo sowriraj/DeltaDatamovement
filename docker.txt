@@ -1,0 +1,38 @@
+# Use an appropriate base image (for example, Fedora)
+FROM fedora:latest
+
+# Install Kerberos libraries using dnf (or yum)
+RUN dnf -y install krb5-libs krb5-workstation
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy NuGet.Config to the container
+COPY NuGet.Config ./
+
+# Copy the .csproj and restore as distinct layers
+COPY *.csproj ./
+RUN dotnet restore
+
+# Copy the remaining files and build the application
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+# Build the runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:3.1
+WORKDIR /app
+COPY --from=build-env /app/out .
+
+# Copy krb5.conf and http.keytab to the container
+COPY krb5.conf /etc/krb5.conf
+COPY http.keytab /app
+
+# Expose the port the app runs on
+EXPOSE 80
+
+# Set environment variables for Kerberos authentication
+ENV KRB5_KTNAME=/app/http.keytab
+ENV KRB5_CONFIG=/etc/krb5.conf
+
+# Start the application
+ENTRYPOINT ["dotnet", "YourAppName.dll"]
