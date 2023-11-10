@@ -42,6 +42,92 @@ class Program
     }
 }
 
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+class Program
+{
+    static ConcurrentBag<string> resultFiles = new ConcurrentBag<string>();
+
+    static void Main()
+    {
+        Console.Write("Enter the text to search: ");
+        string searchText = Console.ReadLine();
+
+        Console.Write("Enter the root folder path: ");
+        string rootFolder = Console.ReadLine();
+
+        SearchTextInFiles(rootFolder, searchText);
+
+        // Export the result to CSV
+        ExportToCSV("SearchResults.csv");
+
+        Console.WriteLine("Search completed. Results exported to SearchResults.csv.");
+    }
+
+    static void SearchTextInFiles(string folderPath, string searchText)
+    {
+        try
+        {
+            Parallel.ForEach(Directory.GetFiles(folderPath, "*.*"), filePath =>
+            {
+                if (FileContainsText(filePath, searchText))
+                {
+                    resultFiles.Add(filePath);
+                }
+            });
+
+            // Recursively process subfolders
+            Parallel.ForEach(Directory.GetDirectories(folderPath), subfolder =>
+            {
+                SearchTextInFiles(subfolder, searchText);
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error accessing folder {folderPath}: {ex.Message}");
+        }
+    }
+
+    static bool FileContainsText(string filePath, string searchText)
+    {
+        try
+        {
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                while (!reader.EndOfStream)
+                {
+                    string line = reader.ReadLine();
+                    if (line.Contains(searchText))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reading file {filePath}: {ex.Message}");
+            return false;
+        }
+    }
+
+    static void ExportToCSV(string outputPath)
+    {
+        try
+        {
+            File.WriteAllLines(outputPath, resultFiles.Select(file => $"\"{file}\""));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting to CSV: {ex.Message}");
+        }
+    }
+}
 
 
 dotnet add package System.Data.SqlClient
