@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace FileSearchApp
+{
+    public partial class MainForm : Form
+    {
+        private ConcurrentBag<SearchResult> searchResults = new ConcurrentBag<SearchResult>();
+
+        public MainForm()
+        {
+            InitializeComponent();
+        }
+
+        private void searchButton_Click(object sender, EventArgs e)
+        {
+            searchResults.Clear();
+            dataGridView.Rows.Clear();
+
+            string searchText = searchTextbox.Text.Trim();
+            if (string.IsNullOrEmpty(searchText))
+            {
+                MessageBox.Show("Please enter text to search.");
+                return;
+            }
+
+            // Split the search text into individual keywords
+            string[] keywords = searchText.Split(',');
+
+            FolderBrowserDialog folderBrowser = new FolderBrowserDialog();
+            DialogResult result = folderBrowser.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                string rootFolder = folderBrowser.SelectedPath;
+
+                SearchTextInFiles(rootFolder, keywords);
+
+                // Display results in DataGridView
+                foreach (SearchResult resultItem in searchResults)
+                {
+                    dataGridView.Rows.Add(resultItem.FileName, resultItem.LineNumber, resultItem.SearchKey, resultItem.LineContents);
+                }
+
+                // Export the result to CSV
+                ExportToCSV("SearchResults.csv");
+
+                MessageBox.Show("Search completed. Results exported to SearchResults.csv.");
+            }
+        }
+
+        private void SearchTextInFiles(string folderPath, string[] keywords)
+        {
+            try
+            {
+                Parallel.ForEach(Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories), filePath =>
+                {
+                    SearchFile(filePath, keywords);
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error accessing folder {folderPath}: {ex.Message}");
+            }
+        }
+
+        private void SearchFile(string filePath, string[] keywords)
+        {
+            try
+            {
+                using (StreamReader reader = new StreamReader(filePath))
+                {
+                    int lineNumber = 0;
+
+                    while (!reader.EndOfStream)
+                    {
+                        lineNumber++;
+                        string line = reader.ReadLine();
+
+                        // Check if all keywords are present in the line
+                        if (keywords.All(keyword => line.Contains(keyword)))
+                        {
+                            SearchResult result = new SearchResult
+                            {
+                                FileName = Path.GetFileName(filePath),
+                                LineNumber = lineNumber,
+                                SearchKey = string.Join(",", keywords),
+                                LineContents = line
+                            };
+
+                            searchResults.Add(result);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
+            }
+        }
+
+        private void ExportToCSV(string outputPath)
+        {
+            try
+            {
+                File.WriteAllLines(outputPath, searchResults.Select(result =>
+                    $"\"{result.FileName}\",\"{result.LineNumber}\",\"{result.SearchKey}\",\"{result.LineContents}\""));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error exporting to CSV: {ex.Message}");
+            }
+        }
+    }
+
+    public class SearchResult
+    {
+        public string FileName { get; set; }
+        public int LineNumber { get; set; }
+        public string SearchKey { get; set; }
+        public string LineContents { get; set; }
+    }
+}
