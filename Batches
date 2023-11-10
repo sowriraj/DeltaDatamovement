@@ -304,3 +304,41 @@ private void SearchFile(string filePath, string[] keywords)
         MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
     }
 }
+private void SearchFile(string filePath, string[] keywords)
+{
+    try
+    {
+        int lineNumber = 0;
+
+        string[] lines;
+
+        // Read all lines at once
+        lock (fileLock)
+        {
+            lines = File.ReadAllLines(filePath);
+        }
+
+        Parallel.ForEach(lines, (line, _, index) =>
+        {
+            int currentLineNumber = (int)index + 1; // Line numbers start from 1
+
+            // Check if all keywords are present in the line
+            if (keywords.All(keyword => line.Contains(keyword)))
+            {
+                SearchResult result = new SearchResult
+                {
+                    FileName = Path.GetFileName(filePath),
+                    LineNumber = currentLineNumber,
+                    SearchKey = string.Join(",", keywords),
+                    LineContents = line
+                };
+
+                searchResults.Add(result);
+            }
+        });
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
+    }
+}
