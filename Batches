@@ -189,3 +189,46 @@ private void SearchFile(string filePath, string[] keywords)
         MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
     }
 }
+private readonly object fileLock = new object();
+
+private void SearchFile(string filePath, string[] keywords)
+{
+    try
+    {
+        int lineNumber = 0;
+
+        using (StreamReader reader = new StreamReader(filePath))
+        {
+            while (!reader.EndOfStream)
+            {
+                lineNumber++;
+                string line;
+
+                // Use a lock to ensure exclusive access to the StreamReader
+                lock (fileLock)
+                {
+                    // Read one line at a time
+                    line = reader.ReadLine();
+                }
+
+                // Check if all keywords are present in the line
+                if (keywords.All(keyword => line.Contains(keyword)))
+                {
+                    SearchResult result = new SearchResult
+                    {
+                        FileName = Path.GetFileName(filePath),
+                        LineNumber = lineNumber,
+                        SearchKey = string.Join(",", keywords),
+                        LineContents = line
+                    };
+
+                    searchResults.Add(result);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
+    }
+}
