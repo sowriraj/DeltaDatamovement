@@ -270,3 +270,37 @@ private void SearchFile(string filePath, string[] keywords)
         MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
     }
 }
+private void SearchFile(string filePath, string[] keywords)
+{
+    try
+    {
+        int lineNumber = 0;
+
+        using (var fileStream = File.OpenText(filePath))
+        {
+            string line;
+            while ((line = fileStream.ReadLine()) != null)
+            {
+                lineNumber++;
+
+                // Check if all keywords are present in the line
+                if (keywords.All(keyword => line.Contains(keyword)))
+                {
+                    SearchResult result = new SearchResult
+                    {
+                        FileName = Path.GetFileName(filePath),
+                        LineNumber = lineNumber,
+                        SearchKey = string.Join(",", keywords),
+                        LineContents = line
+                    };
+
+                    searchResults.Add(result);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
+    }
+}
