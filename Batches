@@ -341,4 +341,26 @@ private void SearchFile(string filePath, string[] keywords)
     {
         MessageBox.Show($"Error reading file {filePath}: {ex.Message}");
     }
-}
+}apiVersion: apps/v1
+kind: DeploymentConfig
+metadata:
+  name: angular-app-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: angular-app
+    spec:
+      containers:
+        - name: angular-app
+          image: angular-app:latest
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              ng build --prod --base-href=/subfolder/ && cp -r /tmp/artifacts/* /var/www/html
+          env:
+            - name: BASE_HREF
+              value: "/subfolder/"
+
