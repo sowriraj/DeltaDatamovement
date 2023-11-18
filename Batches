@@ -431,3 +431,18 @@ export class ConfigService {
     return !!this.config;
   }
 }
+import { enableProdMode } from '@angular/core';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app/app.module';
+import { environment } from './environments/environment';
+
+if (environment.production) {
+  enableProdMode();
+}
+
+const { pathname } = window.location;
+const baseHref = pathname.startsWith('/subfolder/') ? '/subfolder/' : '/';
+
+platformBrowserDynamic([{ provide: 'APP_BASE_HREF', useValue: baseHref }])
+  .bootstrapModule(AppModule)
+  .catch((err) => console.error(err));
