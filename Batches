@@ -392,3 +392,42 @@ spec:
             - name: BASE_HREF
               value: "/subfolder/"
 
+// config.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ConfigService {
+  private configSubject = new BehaviorSubject<any>(null);
+  config$ = this.configSubject.asObservable();
+
+  private config: any;
+
+  constructor(private http: HttpClient) {}
+
+  loadConfig(): void {
+    if (!this.config) {
+      this.http.get('assets/config.json').subscribe(
+        (data) => {
+          this.config = data;
+          this.configSubject.next(this.config);
+        },
+        (error) => {
+          console.error('Error loading config file:', error);
+          throw error;
+        }
+      );
+    }
+  }
+
+  getConfig(): any {
+    return this.config;
+  }
+
+  isInitialized(): boolean {
+    return !!this.config;
+  }
+}
