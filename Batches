@@ -463,3 +463,12 @@ document.querySelector('base').setAttribute('href', baseHref);
 
 platformBrowserDynamic().bootstrapModule(AppModule)
   .catch(err => console.error(err));
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # If the request is not a file or directory, rewrite it to the Angular subfolder
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^angularapp/(.*)$ /angularapp/$1 [L]
+</IfModule>
