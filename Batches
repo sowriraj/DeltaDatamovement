@@ -472,3 +472,18 @@ platformBrowserDynamic().bootstrapModule(AppModule)
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^angularapp/(.*)$ /angularapp/$1 [L]
 </IfModule>
+<VirtualHost *:80>
+    ServerAdmin webmaster@yourdomain.com
+    DocumentRoot /var/www/html
+
+    <Directory "/var/www/html">
+        AllowOverride All
+        # Other configuration directives for the main directory
+    </Directory>
+
+    ProxyPass /angularapp http://localhost:4200/angularapp
+    ProxyPassReverse /angularapp http://localhost:4200/angularapp
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
