@@ -487,3 +487,46 @@ platformBrowserDynamic().bootstrapModule(AppModule)
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Replace the URL with the actual endpoint you want to post to
+        string apiUrl = "https://example.com/api/resource";
+
+        // Replace jsonString with your actual JSON data
+        string jsonString = "{\"key1\":\"value1\",\"key2\":\"value2\"}";
+
+        // Create an instance of HttpClient
+        using (HttpClient httpClient = new HttpClient())
+        {
+            // Create StringContent from the JSON string
+            StringContent content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+
+            try
+            {
+                // Make the POST request
+                HttpResponseMessage response = await httpClient.PostAsync(apiUrl, content);
+
+                // Check if the request was successful (status code 2xx)
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("POST request successful");
+                }
+                else
+                {
+                    Console.WriteLine($"POST request failed with status code {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+        }
+    }
+}
