@@ -530,3 +530,11 @@ class Program
         }
     }
 }
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /subfolder/   # Adjust this according to your subfolder
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /subfolder/index.html [L]   # Adjust this according to your subfolder
+</IfModule>
