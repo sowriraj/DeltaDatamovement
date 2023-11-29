@@ -538,3 +538,29 @@ class Program
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /subfolder/index.html [L]   # Adjust this according to your subfolder
 </IfModule>
+
+<VirtualHost *:80>
+    ServerAdmin webmaster@example.com
+    DocumentRoot /var/www/html
+
+    # Redirect from root to the subfolder
+    RedirectMatch ^/$ /myapp/
+
+    <Directory "/var/www/html">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    <Directory "/var/www/html/myapp">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # Disable trailing slash redirect
+        DirectorySlash Off
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
