@@ -606,4 +606,15 @@ class Program
     RewriteRule ^/old-url$ /new-url [L,R=301]
     # Add more rewrite rules as needed
 </IfModule>
+# custom_rewrite.conf
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Remove trailing slash at the end of subfolder URLs
+    RewriteRule ^/subfolder/(.*)/$ /subfolder/$1 [L,R=301]
+
+    # Add more rewrite rules as needed
+
+</IfModule>
 
