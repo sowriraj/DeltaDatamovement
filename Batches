@@ -599,4 +599,11 @@ class Program
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.+)/$ /$1 [L,R=301]
 </IfModule>
+# custom_rewrite.conf
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^/old-url$ /new-url [L,R=301]
+    # Add more rewrite rules as needed
+</IfModule>
 
