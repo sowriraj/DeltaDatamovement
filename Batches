@@ -590,3 +590,13 @@ class Program
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Remove trailing slash for subfolders
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.+)/$ /$1 [L,R=301]
+</IfModule>
+
