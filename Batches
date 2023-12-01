@@ -617,4 +617,16 @@ class Program
     # Add more rewrite rules as needed
 
 </IfModule>
+# custom_rewrite.conf
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Remove trailing slash at the end of subfolder URLs
+    RewriteRule ^/subfolder/(.*)/$ /subfolder/$1 [L,R=301]
+
+    # Rewrite requests to the Angular app
+    RewriteCond %{REQUEST_URI} !^/subfolder/
+    RewriteRule ^/(.*)$ /subfolder/$1 [L]
+</IfModule>
 
