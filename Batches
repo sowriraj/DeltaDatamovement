@@ -630,3 +630,28 @@ class Program
     RewriteRule ^/(.*)$ /subfolder/$1 [L]
 </IfModule>
 
+<VirtualHost *:80>
+    ServerName your-domain.com
+    DocumentRoot /var/www/html/your-site
+
+    <Directory "/var/www/html/your-site">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    # Rewrite logic
+    RewriteEngine On
+
+    # Example: Redirect HTTP to HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Example: Remove trailing slashes
+    RewriteRule ^(.+)/$ $1 [L,R=301]
+
+    # Add more rewrite rules as needed
+
+</VirtualHost>
