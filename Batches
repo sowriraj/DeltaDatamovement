@@ -677,3 +677,31 @@ class Program
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+<VirtualHost *:80>
+    ServerName your-domain.com
+    DocumentRoot /var/www/html
+
+    <Directory "/var/www/html">
+        Options FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Alias to point /subfolder to the actual directory
+    Alias /subfolder /var/www/html/subfolder
+
+    <Directory "/var/www/html/subfolder">
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+
+        # Rewrite to handle Angular routes without trailing slashes
+        RewriteEngine On
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule ^(.*)$ /subfolder/index.html#$1 [L,QSA]
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
