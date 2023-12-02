@@ -655,3 +655,25 @@ class Program
     # Add more rewrite rules as needed
 
 </VirtualHost>
+<VirtualHost *:80>
+    ServerName your-domain.com
+    DocumentRoot /var/www/html
+
+    <Directory "/var/www/html">
+        Options FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Alias to point /subfolder to the actual directory
+    Alias /subfolder /var/www/html/subfolder
+
+    <Directory "/var/www/html/subfolder">
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
