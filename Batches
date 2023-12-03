@@ -705,3 +705,36 @@ class Program
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+
+<VirtualHost *:80>
+    ServerName example.com
+    DocumentRoot /var/www/mainapp
+
+    <Directory "/var/www/mainapp">
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    Alias "/subfolder" "/var/www/mainapp/subfolder"
+
+    <Directory "/var/www/mainapp/subfolder">
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    <Location "/subfolder">
+        RewriteEngine On
+
+        # Add a trailing slash if it's missing
+        RewriteCond %{REQUEST_URI} !/$
+        RewriteRule ^(.*)$ %{REQUEST_URI}/ [L,R=301]
+
+        # Other rewrite rules or configurations specific to the subfolder
+
+        ProxyPass http://localhost:3000/    # Replace with your actual backend URL
+        ProxyPassReverse http://localhost:3000/    # Replace with your actual backend URL
+    </Location>
+</VirtualHost>
+
