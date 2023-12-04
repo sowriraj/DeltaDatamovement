@@ -738,3 +738,35 @@ class Program
     </Location>
 </VirtualHost>
 
+<!-- _PopupPartial.cshtml -->
+<div>
+    <h2>@Model.Title</h2>
+    <p>@Model.Content</p>
+</div>
+
+// ExampleViewModel.cs
+public class ExampleViewModel
+{
+    public string Title { get; set; }
+    public string Content { get; set; }
+}
+// HomeController.cs
+public class HomeController : Controller
+{
+    public ActionResult Index()
+    {
+        return View();
+    }
+
+    public PartialViewResult ShowPopup()
+    {
+        var model = new ExampleViewModel
+        {
+            Title = "Popup Title",
+            Content = "This is the content of the popup."
+        };
+
+        return PartialView("_PopupPartial", model);
+    }
+}
+
