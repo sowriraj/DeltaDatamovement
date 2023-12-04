@@ -770,3 +770,50 @@ public class HomeController : Controller
     }
 }
 
+<!-- Index.cshtml -->
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<h2>Welcome to ASP.NET MVC!</h2>
+
+<button id="showPartialButton" class="btn btn-primary">Show Partial View</button>
+
+<!-- Bootstrap modal -->
+<div class="modal" tabindex="-1" role="dialog" id="myModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Partial View Modal</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="partialViewContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $("#showPartialButton").click(function () {
+            // Make an AJAX request to get and render the partial view
+            $.ajax({
+                url: '@Url.Action("RenderPartialView", "Home")',
+                type: 'GET',
+                success: function (result) {
+                    // Set the content of the modal body with the rendered partial view
+                    $('#partialViewContainer').html(result);
+
+                    // Show the Bootstrap modal
+                    $('#myModal').modal('show');
+                },
+                error: function () {
+                    alert('Failed to load the partial view.');
+                }
+            });
+        });
+    });
+</script>
