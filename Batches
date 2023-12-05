@@ -847,3 +847,24 @@ Best regards,
 [Your Full Name]
 [Your Contact Information]
 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: your-host-tls-secret
+  namespace: your-project
+type: kubernetes.io/tls
+data:
+  tls.crt: BASE64_ENCODED_HOST_CERT_CONTENT
+  tls.key: BASE64_ENCODED_HOST_KEY_CONTENT
+
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: your-ca-secret-name
+  namespace: your-project
+type: Opaque
+data:
+  tls.crt: BASE64_ENCODED_CA_CERT_CONTENT
+
+
