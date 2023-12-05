@@ -817,3 +817,33 @@ public class HomeController : Controller
         });
     });
 </script>
+
+Subject: Assistance Needed: Subpath Route Access Issue in Angular Application Hosted on Apache Container Server
+
+Dear [Support Team],
+
+I hope this message finds you well. My name is [Your Name], and I am reaching out to seek assistance with a challenge I am facing in configuring subpath route access for an Angular application hosted on an Apache container server.
+
+Here's a brief overview of the situation:
+
+Angular Application: I have developed an Angular application that is deployed on our Apache container server.
+
+Server Configuration: The Apache server is set up to serve the Angular application, and it is accessible via the base URL (e.g., http://example.com). The application works perfectly when accessed without any subpath.
+
+Challenge: I am encountering difficulties in configuring the server to allow access to the Angular application through subpaths (e.g., http://example.com/subpath). Despite my attempts, I haven't been able to achieve the desired functionality.
+
+I have reviewed the Apache configuration files, consulted Angular documentation, and explored various online resources, but the issue persists.
+
+Could you please provide guidance on how to correctly configure the Apache server to support subpath route access for the Angular application? Additionally, if there are specific Angular routing configurations that need to be adjusted, I would greatly appreciate any insights you can offer.
+
+If you require more details about our server setup, Angular application structure, or any specific configuration files, please let me know, and I will provide the necessary information promptly.
+
+Your prompt assistance in resolving this matter would be highly appreciated, as it is crucial for the seamless functioning of our application.
+
+Thank you in advance for your time and support.
+
+Best regards,
+
+[Your Full Name]
+[Your Contact Information]
+
