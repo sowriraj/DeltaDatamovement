@@ -165,3 +165,24 @@ Quality of Work:
 
 Consistently delivered high-quality code, leading to a reduction in post-release issues and increased client satisfaction.
 Implemented and maintained robust testing processes, ensuring the reliability and stability of developed systems.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  annotations:
+    haproxy.org/rewrite-target: /
+    haproxy.org/ssl-certificate: "my-tls-secret"
+    haproxy.org/ssl-redirect: "true"
+    haproxy.org/ssl-passthrough: "false"
+spec:
+  rules:
+  - host: your-domain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
