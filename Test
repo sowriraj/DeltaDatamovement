@@ -158,3 +158,75 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+var builder = WebApplication.CreateBuilder(args);
+
+// Get the host name
+var hostName = System.Net.Dns.GetHostName();
+
+// Check the host name and set the environment variable
+if (hostName.Equals("YourSpecificHostName", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
+    {
+        { "ASPNETCORE_ENVIRONMENT", "Staging" }
+    });
+}
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();
+var builder = WebApplication.CreateBuilder(args);
+
+// Get the host name
+var hostName = System.Net.Dns.GetHostName();
+
+// Check the host name and set the environment variable
+if (hostName.Equals("YourSpecificHostName", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
+    {
+        { "ASPNETCORE_ENVIRONMENT", "Staging" }
+    });
+}
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();
