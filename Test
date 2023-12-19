@@ -125,3 +125,36 @@ class Program
         }
     }
 }
+var builder = WebApplication.CreateBuilder(args);
+
+// Check the host path and set the environment variable
+if (builder.Environment.ContentRootPath.Contains("YourSpecificHostPath"))
+{
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
+    {
+        { "ASPNETCORE_ENVIRONMENT", "Staging" }
+    });
+}
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();
