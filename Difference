@@ -64,3 +64,49 @@ public class CompareModel : PageModel
 
     // ... (rest of the code)
 }
+public IActionResult OnGetDownloadReport()
+{
+    if (Result == null)
+    {
+        return NotFound();
+    }
+
+    var fileName = $"ComparisonReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+    using (var package = new ExcelPackage())
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Comparison Report");
+
+        // Add headers
+        for (int col = 1; col <= Result.Max(d => d.Column); col++)
+        {
+            worksheet.Cells[1, col].Value = Result.FirstOrDefault(d => d.Column == col)?.ColumnName;
+        }
+
+        // Add data with formatting
+        int row = 2;
+        foreach (var difference in Result)
+        {
+            for (int col = 1; col <= difference.Column; col++)
+            {
+                worksheet.Cells[row, col].Value = difference.Values[col - 1];
+
+                if (difference.IsMatched)
+                {
+                    worksheet.Cells[row, col].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[row, col].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Green);
+                }
+                else
+                {
+                    worksheet.Cells[row, col].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[row, col].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Red);
+                }
+            }
+
+            row++;
+        }
+
+        return File(package.GetAsByteArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+}
+
+
