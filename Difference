@@ -1,0 +1,7 @@
+public class DifferenceModel
+{
+    public int Column { get; set; }
+    public string ColumnName { get; set; }
+    public List<string> Values { get; set; }
+    public bool IsMatched { get; set; }
+}
