@@ -1,0 +1,308 @@
+public class ExcelComparisonResult
+{
+    public string Message { get; set; }
+    public List<string> Differences { get; set; }
+}
+
+dotnet add package EPPlus
+
+dotnet new razor -n ExcelCompareApp
+cd ExcelCompareApp
+
+@page
+@model CompareModel
+@using OfficeOpenXml
+@using System.IO
+
+<h1>Compare Excel Files</h1>
+
+<form method="post" enctype="multipart/form-data">
+    <label for="file1">Select File 1:</label>
+    <input type="file" name="file1" required />
+
+    <label for="file2">Select File 2:</label>
+    <input type="file" name="file2" required />
+
+    <button type="submit">Compare</button>
+</form>
+
+@if (Model.Result != null)
+{
+    <h3>@Model.Result.Message</h3>
+    <ul>
+        @foreach (var difference in Model.Result.Differences)
+        {
+            <li>@difference</li>
+        }
+    </ul>
+    <a asp-page-handler="DownloadReport">Download Comparison Report</a>
+}
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using OfficeOpenXml;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+public class CompareModel : PageModel
+{
+    [BindProperty]
+    public IFormFile File1 { get; set; }
+
+    [BindProperty]
+    public IFormFile File2 { get; set; }
+
+    public ExcelComparisonResult Result { get; set; }
+
+    public async Task OnPostAsync()
+    {
+        if (File1 == null || File2 == null)
+        {
+            ModelState.AddModelError(string.Empty, "Please select both files.");
+            return;
+        }
+
+        var differences = CompareExcelFiles(File1, File2);
+        Result = new ExcelComparisonResult
+        {
+            Message = "Comparison completed successfully!",
+            Differences = differences,
+        };
+    }
+
+    public IActionResult OnGetDownloadReport()
+    {
+        if (Result == null)
+        {
+            return NotFound();
+        }
+
+        var fileName = $"ComparisonReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Comparison Report");
+
+            for (int i = 0; i < Result.Differences.Count; i++)
+            {
+                worksheet.Cells[i + 1, 1].Value = Result.Differences[i];
+            }
+
+            return File(package.GetAsByteArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+    }
+
+    private List<string> CompareExcelFiles(IFormFile file1, IFormFile file2)
+    {
+        var differences = new List<string>();
+
+        using (var stream1 = file1.OpenReadStream())
+        using (var stream2 = file2.OpenReadStream())
+        {
+            using (var excelPackage1 = new ExcelPackage(stream1))
+            using (var excelPackage2 = new ExcelPackage(stream2))
+            {
+                var sheet1 = excelPackage1.Workbook.Worksheets[0];
+                var sheet2 = excelPackage2.Workbook.Worksheets[0];
+
+                // Assuming sheets have the same structure and key field for comparison
+                var keyField = "ID";
+
+                for (int row = 2; row <= sheet1.Dimension.Rows; row++)
+                {
+                    var key1 = sheet1.Cells[row, 1].Value.ToString();
+                    var key2 = sheet2.Cells[row, 1].Value.ToString();
+
+                    if (!string.Equals(key1, key2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        differences.Add($"Mismatch in key {key1} at row {row}");
+                    }
+
+                    // Compare other fields as needed
+                    var value1 = sheet1.Cells[row, 2].Value.ToString();
+                    var value2 = sheet2.Cells[row, 2].Value.ToString();
+                    if (!string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        differences.Add($"Mismatch in value at row {row}");
+                    }
+                    // Add more comparisons as needed
+                }
+
+                // Check for rows in sheet2 not present in sheet1
+                for (int row = sheet1.Dimension.Rows + 1; row <= sheet2.Dimension.Rows; row++)
+                {
+                    var key2 = sheet2.Cells[row, 1].Value.ToString();
+                    differences.Add($"Row with key {key2} not found in sheet1");
+                }
+            }
+        }
+
+        return differences;
+    }
+}
+
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using OfficeOpenXml;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+public class CompareModel : PageModel
+{
+    [BindProperty]
+    public IFormFile File1 { get; set; }
+
+    [BindProperty]
+    public IFormFile File2 { get; set; }
+
+    public ExcelComparisonResult Result { get; set; }
+
+    public async Task OnPostAsync()
+    {
+        if (File1 == null || File2 == null)
+        {
+            ModelState.AddModelError(string.Empty, "Please select both files.");
+            return;
+        }
+
+        var differences = CompareExcelFiles(File1, File2);
+        Result = new ExcelComparisonResult
+        {
+            Message = "Comparison completed successfully!",
+            Differences = differences,
+        };
+    }
+
+    public IActionResult OnGetDownloadReport()
+    {
+        if (Result == null)
+        {
+            return NotFound();
+        }
+
+        var fileName = $"ComparisonReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Comparison Report");
+
+            for (int i = 0; i < Result.Differences.Count; i++)
+            {
+                worksheet.Cells[i + 1, 1].Value = Result.Differences[i];
+            }
+
+            return File(package.GetAsByteArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+    }
+
+    private List<string> CompareExcelFiles(IFormFile file1, IFormFile file2)
+    {
+        var differences = new List<string>();
+
+        using (var stream1 = file1.OpenReadStream())
+        using (var stream2 = file2.OpenReadStream())
+        {
+            using (var excelPackage1 = new ExcelPackage(stream1))
+            using (var excelPackage2 = new ExcelPackage(stream2))
+            {
+                var sheet1 = excelPackage1.Workbook.Worksheets[0];
+                var sheet2 = excelPackage2.Workbook.Worksheets[0];
+
+                for (int row = 2; row <= sheet1.Dimension.Rows; row++)
+                {
+                    for (int col = 1; col <= sheet1.Dimension.Columns; col++)
+                    {
+                        var cell1 = sheet1.Cells[row, col].Value?.ToString() ?? string.Empty;
+                        var cell2 = sheet2.Cells[row, col].Value?.ToString() ?? string.Empty;
+
+                        if (!string.Equals(cell1, cell2, StringComparison.OrdinalIgnoreCase))
+                        {
+                            differences.Add($"Mismatch in column {GetColumnName(col)} at row {row}");
+                        }
+                    }
+                }
+
+                // Check for rows in sheet2 not present in sheet1
+                for (int row = sheet1.Dimension.Rows + 1; row <= sheet2.Dimension.Rows; row++)
+                {
+                    differences.Add($"Row at row {row} not found in sheet1");
+                }
+            }
+        }
+
+        return differences;
+    }
+
+    private string GetColumnName(int columnNumber)
+    {
+        int dividend = columnNumber;
+        string columnName = String.Empty;
+
+        while (dividend > 0)
+        {
+            int modulo = (dividend - 1) % 26;
+            columnName = Convert.ToChar(65 + modulo).ToString() + columnName;
+            dividend = (dividend - modulo) / 26;
+        }
+
+        return columnName;
+    }
+}
+
+// ... (previous code)
+
+public IActionResult OnGetDownloadReport()
+{
+    if (Result == null)
+    {
+        return NotFound();
+    }
+
+    var fileName = $"ComparisonReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+    using (var package = new ExcelPackage())
+    {
+        var worksheet = package.Workbook.Worksheets.Add("Comparison Report");
+
+        // Add headers
+        for (int col = 1; col <= Result.Differences.Max(d => d.Column); col++)
+        {
+            worksheet.Cells[1, col].Value = Result.Differences.FirstOrDefault(d => d.Column == col)?.ColumnName;
+        }
+
+        // Add data with formatting
+        int row = 2;
+        foreach (var difference in Result.Differences)
+        {
+            for (int col = 1; col <= difference.Column; col++)
+            {
+                worksheet.Cells[row, col].Value = difference.Values[col - 1];
+
+                if (difference.IsMatched)
+                {
+                    worksheet.Cells[row, col].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[row, col].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Green);
+                }
+                else
+                {
+                    worksheet.Cells[row, col].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[row, col].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Red);
+                }
+            }
+
+            row++;
+        }
+
+        return File(package.GetAsByteArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+}
+
+// ... (previous code)
+
