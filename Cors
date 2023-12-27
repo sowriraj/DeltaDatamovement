@@ -1,1 +1,34 @@
 
+{
+  "AllowedOrigins": {
+    "Development": "http://localhost:3000",
+    "Staging": "https://staging.example.com",
+    "Production": "https://www.example.com"
+  }
+}
+public void ConfigureServices(IServiceCollection services)
+{
+    // Other ConfigureServices configuration...
+
+    // Read allowed origins based on environment
+    var allowedOrigins = Configuration["AllowedOrigins:" + Environment.EnvironmentName];
+
+    services.AddCors(options =>
+    {
+        options.AddPolicy("AllowSpecificOrigin",
+            builder => builder.WithOrigins(allowedOrigins)
+                              .AllowAnyMethod()
+                              .AllowAnyHeader());
+    });
+}
+public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+{
+    // Other Configure configuration...
+
+    // Read allowed origins based on environment
+    var allowedOrigins = Configuration["AllowedOrigins:" + env.EnvironmentName];
+
+    app.UseCors("AllowSpecificOrigin");
+
+    // Other middleware configuration...
+}
