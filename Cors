@@ -41,3 +41,18 @@ public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         </customHeaders>
     </httpProtocol>
 </system.webServer>
+
+<configuration>
+  <!-- Other configuration settings -->
+
+  <location path="." inheritInChildApplications="false">
+    <system.webServer>
+      <aspNetCore processPath="dotnet" arguments=".\YourAppName.dll" stdoutLogEnabled="false" hostingModel="inprocess">
+        <!-- Add environment variable setting based on the host URL -->
+        <environmentVariables>
+          <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="%HTTP_HOST%" />
+        </environmentVariables>
+      </aspNetCore>
+    </system.webServer>
+  </location>
+</configuration>
