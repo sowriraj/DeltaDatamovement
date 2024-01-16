@@ -1,0 +1,10 @@
+CREATE TABLE user_table (
+    user_id NUMBER PRIMARY KEY,
+    first_name VARCHAR2(50) NOT NULL,
+    last_name VARCHAR2(50) NOT NULL,
+    middle_name VARCHAR2(50),
+    username VARCHAR2(50) UNIQUE NOT NULL,
+    password VARCHAR2(100) NOT NULL,
+    email VARCHAR2(100) UNIQUE NOT NULL,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
