@@ -1,0 +1,130 @@
+using Microsoft.AspNetCore.Http;
+
+namespace YourNamespace.Pages
+{
+    public class IndexModel : PageModel
+    {
+        [BindProperty]
+        public IFormFile LogFile { get; set; }
+
+        public List<Tuple<int, string>> IPAddresses { get; set; }
+
+        public IActionResult OnGet()
+        {
+            return Page();
+        }
+
+        public IActionResult OnPost()
+        {
+            if (LogFile != null)
+            {
+                string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", LogFile.FileName);
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    LogFile.CopyTo(fileStream);
+                }
+                IPAddresses = GetUniqueIPAddressesFromFile(filePath);
+            }
+            return Page();
+        }
+
+        private List<Tuple<int, string>> GetUniqueIPAddressesFromFile(string filePath)
+        {
+            // Your logic to read unique IP addresses from the file
+        }
+    }
+}
+
+
+
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Unique IP Address List";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="logFile">Select Log File:</label>
+        <input type="file" class="form-control-file" id="logFile" name="LogFile">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+@if (Model.IPAddresses != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Row Number</th>
+                <th>IP Address</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ip in Model.IPAddresses)
+            {
+                <tr>
+                    <td>@ip.Item1</td>
+                    <td>@ip.Item2</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.RegularExpressions;
+
+namespace YourNamespace.Pages
+{
+    public class IndexModel : PageModel
+    {
+        public List<Tuple<int, string>> IPAddresses { get; set; }
+
+        public IActionResult OnGet()
+        {
+            IPAddresses = GetUniqueIPAddressesFromFile("ip_log.txt");
+            return Page();
+        }
+
+        private List<Tuple<int, string>> GetUniqueIPAddressesFromFile(string filePath)
+        {
+            var ipAddresses = new HashSet<string>();
+            var uniqueIPList = new List<Tuple<int, string>>();
+            try
+            {
+                var lines = System.IO.File.ReadAllLines(filePath);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    // Using regex to find all IP addresses in each line
+                    var ipMatches = Regex.Matches(lines[i], @"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b");
+                    foreach (Match match in ipMatches)
+                    {
+                        // Check if the IP address is not already in the set
+                        if (ipAddresses.Add(match.Value))
+                        {
+                            // Add a tuple containing the row number and IP address to the list
+                            uniqueIPList.Add(Tuple.Create(i + 1, match.Value));
+                        }
+                    }
+                }
+            }
+            catch (IOException ex)
+            {
+                // Handle file IO exception
+                ModelState.AddModelError("", $"Error reading file: {ex.Message}");
+            }
+            return uniqueIPList;
+        }
+    }
+}
