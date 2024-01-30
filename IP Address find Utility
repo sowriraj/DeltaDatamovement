@@ -97,3 +97,56 @@ namespace YourNamespace.Pages
         }
     }
 }
+
+
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Unique IP Address List";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="logFolder">Select Log Folder:</label>
+        <input type="text" class="form-control" id="logFolder" name="LogFolder" readonly>
+        <input type="button" class="btn btn-primary" value="Browse" onclick="document.getElementById('logFiles').click();">
+        <input type="file" id="logFiles" name="LogFiles" multiple style="display:none;" webkitdirectory>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+@if (Model.IPAddresses != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Row Number</th>
+                <th>IP Address</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ip in Model.IPAddresses)
+            {
+                <tr>
+                    <td>@ip.Item1</td>
+                    <td>@ip.Item2</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts
+{
+    <script>
+        document.getElementById('logFiles').addEventListener('change', function (e) {
+            var files = e.target.files;
+            if (files.length > 0) {
+                var folderPath = files[0].webkitRelativePath.split(files[0].name)[0];
+                document.getElementById('logFolder').value = folderPath;
+            }
+        });
+    </script>
+}
