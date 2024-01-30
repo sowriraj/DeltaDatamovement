@@ -150,3 +150,22 @@ namespace YourNamespace.Pages
         });
     </script>
 }
+
+
+
+            if (!string.IsNullOrEmpty(LogFolder))
+            {
+                try
+                {
+                    var directoryInfo = new DirectoryInfo(LogFolder);
+                    var files = directoryInfo.GetFiles("*.*", SearchOption.AllDirectories);
+                    foreach (var file in files)
+                    {
+                        AddUniqueIPAddressesFromFile(file.FullName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Error reading folder: {ex.Message}");
+                }
+            }
