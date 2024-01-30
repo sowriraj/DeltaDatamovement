@@ -1,42 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
-namespace YourNamespace.Pages
-{
-    public class IndexModel : PageModel
-    {
-        [BindProperty]
-        public IFormFile LogFile { get; set; }
-
-        public List<Tuple<int, string>> IPAddresses { get; set; }
-
-        public IActionResult OnGet()
-        {
-            return Page();
-        }
-
-        public IActionResult OnPost()
-        {
-            if (LogFile != null)
-            {
-                string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", LogFile.FileName);
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    LogFile.CopyTo(fileStream);
-                }
-                IPAddresses = GetUniqueIPAddressesFromFile(filePath);
-            }
-            return Page();
-        }
-
-        private List<Tuple<int, string>> GetUniqueIPAddressesFromFile(string filePath)
-        {
-            // Your logic to read unique IP addresses from the file
-        }
-    }
-}
-
-
-
 @page
 @model IndexModel
 @{
@@ -47,8 +8,8 @@ namespace YourNamespace.Pages
 
 <form method="post" enctype="multipart/form-data">
     <div class="form-group">
-        <label for="logFile">Select Log File:</label>
-        <input type="file" class="form-control-file" id="logFile" name="LogFile">
+        <label for="logFiles">Select Log Files:</label>
+        <input type="file" class="form-control-file" id="logFiles" name="LogFiles" multiple>
     </div>
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
@@ -76,46 +37,55 @@ namespace YourNamespace.Pages
 
 
 
-
-
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using System;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace YourNamespace.Pages
 {
     public class IndexModel : PageModel
     {
-        public List<Tuple<int, string>> IPAddresses { get; set; }
+        [BindProperty]
+        public List<IFormFile> LogFiles { get; set; }
+
+        public HashSet<string> UniqueIPAddresses { get; set; }
 
         public IActionResult OnGet()
         {
-            IPAddresses = GetUniqueIPAddressesFromFile("ip_log.txt");
             return Page();
         }
 
-        private List<Tuple<int, string>> GetUniqueIPAddressesFromFile(string filePath)
+        public IActionResult OnPost()
         {
-            var ipAddresses = new HashSet<string>();
-            var uniqueIPList = new List<Tuple<int, string>>();
+            UniqueIPAddresses = new HashSet<string>();
+
+            if (LogFiles != null && LogFiles.Count > 0)
+            {
+                foreach (var logFile in LogFiles)
+                {
+                    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", logFile.FileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        logFile.CopyTo(fileStream);
+                    }
+                    AddUniqueIPAddressesFromFile(filePath);
+                }
+            }
+            return Page();
+        }
+
+        private void AddUniqueIPAddressesFromFile(string filePath)
+        {
             try
             {
                 var lines = System.IO.File.ReadAllLines(filePath);
-                for (int i = 0; i < lines.Length; i++)
+                foreach (var line in lines)
                 {
                     // Using regex to find all IP addresses in each line
-                    var ipMatches = Regex.Matches(lines[i], @"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b");
+                    var ipMatches = Regex.Matches(line, @"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b");
                     foreach (Match match in ipMatches)
                     {
-                        // Check if the IP address is not already in the set
-                        if (ipAddresses.Add(match.Value))
-                        {
-                            // Add a tuple containing the row number and IP address to the list
-                            uniqueIPList.Add(Tuple.Create(i + 1, match.Value));
-                        }
+                        UniqueIPAddresses.Add(match.Value);
                     }
                 }
             }
@@ -124,7 +94,6 @@ namespace YourNamespace.Pages
                 // Handle file IO exception
                 ModelState.AddModelError("", $"Error reading file: {ex.Message}");
             }
-            return uniqueIPList;
         }
     }
 }
