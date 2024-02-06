@@ -40,3 +40,40 @@ public class YourPageModel : PageModel
         return new JsonResult(InputModel);
     }
 }
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-your-component',
+  templateUrl: './your-component.component.html',
+  styleUrls: ['./your-component.component.css']
+})
+export class YourComponent implements OnInit {
+  initialData: any = {
+    // Initialize with your initial data
+  };
+  modifiedData: any;
+  isDataChanged = false;
+
+  constructor() { }
+
+  ngOnInit(): void {
+    // Make a deep copy of initialData to modifiedData
+    this.modifiedData = JSON.parse(JSON.stringify(this.initialData));
+  }
+
+  onInputChange() {
+    // Check if data has been changed
+    this.isDataChanged = !this.isDataEqual(this.initialData, this.modifiedData);
+  }
+
+  onSave() {
+    // Save logic here
+    this.initialData = JSON.parse(JSON.stringify(this.modifiedData)); // Update initialData
+    this.isDataChanged = false; // Reset the flag after saving
+  }
+
+  // Function to check if two objects are equal
+  isDataEqual(obj1: any, obj2: any): boolean {
+    return JSON.stringify(obj1) === JSON.stringify(obj2);
+  }
+}
