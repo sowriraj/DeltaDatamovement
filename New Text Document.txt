@@ -77,3 +77,20 @@ export class YourComponent implements OnInit {
     return JSON.stringify(obj1) === JSON.stringify(obj2);
   }
 }
+
+
+import { Directive, Input } from '@angular/core';
+import { MatSelect } from '@angular/material/select';
+
+@Directive({
+  selector: '[appDisplayWith]'
+})
+export class DisplayWithDirective {
+  @Input() appDisplayWith: (option: any) => string;
+
+  constructor(private matSelect: MatSelect) { }
+
+  ngOnInit() {
+    this.matSelect._displayWith = this.appDisplayWith;
+  }
+}
