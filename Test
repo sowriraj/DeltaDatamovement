@@ -230,3 +230,60 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+<!-- Inside your component template -->
+<mat-form-field>
+  <input matInput type="number" [(ngModel)]="sortOrder" appNumbersOnly>
+  <button mat-button (click)="decreaseSortOrder()">-</button>
+  <button mat-button (click)="increaseSortOrder()">+</button>
+</mat-form-field>
+
+
+// Import necessary modules
+import { Component } from '@angular/core';
+
+// Component decorator and class definition
+@Component({
+  selector: 'app-your-component',
+  templateUrl: './your-component.component.html',
+  styleUrls: ['./your-component.component.css']
+})
+
+export class YourComponent {
+  sortOrder: number = 0;
+
+  // Method to decrease sort order
+  decreaseSortOrder() {
+    this.sortOrder--;
+  }
+
+  // Method to increase sort order
+  increaseSortOrder() {
+    this.sortOrder++;
+  }
+}
+
+
+// Import necessary modules
+import { Directive, ElementRef, HostListener } from '@angular/core';
+
+// Directive decorator and class definition
+@Directive({
+  selector: '[appNumbersOnly]'
+})
+export class NumbersOnlyDirective {
+
+  constructor(private el: ElementRef) { }
+
+  // Listen to keydown event and allow only numerical inputs
+  @HostListener('keydown', ['$event']) onKeyDown(event: KeyboardEvent) {
+    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'End', 'Home'];
+    if (allowedKeys.includes(event.key)) {
+      return;
+    }
+
+    if ((event.key < '0' || event.key > '9') && event.key !== '-') {
+      event.preventDefault();
+    }
+  }
+}
