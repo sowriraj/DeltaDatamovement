@@ -58,4 +58,29 @@ class Program
         // DateTime lastSyncTime = (DateTime)sqlCommand.ExecuteScalar();
         // return lastSyncTime;
     }
+
+
+    import { MatTableDataSource } from '@angular/material/table';
+import { YourDataService } from 'path/to/your-data.service';
+
+export class YourComponent {
+  dataSource = new MatTableDataSource<any>([]);
+  displayedColumns: string[] = ['select', 'column1', 'column2', ...]; // Add other column names here
+
+  constructor(private dataService: YourDataService) {}
+
+  ngOnInit() {
+    // Subscribe to the data service to get updates
+    this.dataService.getData().subscribe((updatedData: any[]) => {
+      // Update only particular data in dataSource
+      updatedData.forEach((updatedItem: any) => {
+        const index = this.dataSource.data.findIndex((item: any) => item.id === updatedItem.id); // Assuming you have an identifier like 'id'
+        if (index !== -1) {
+          this.dataSource.data[index] = { ...updatedItem }; // Update the specific item in dataSource.data
+        }
+      });
+      this.dataSource._updateChangeSubscription(); // Trigger data change detection
+    });
+  }
+}
 }
