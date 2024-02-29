@@ -1,0 +1,35 @@
+<mat-selection-list>
+  <mat-list-option>
+    <div class="item">
+      <div class="row">
+        <div class="row-number">1</div>
+        <div class="left-data">Left-aligned data</div>
+        <div class="right-data">Right-aligned data</div>
+      </div>
+    </div>
+  </mat-list-option>
+  <!-- More mat-list-options here -->
+</mat-selection-list>
+
+.item {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.row-number {
+  margin-right: 10px; /* Adjust as needed */
+}
+
+.left-data {
+  flex: 1;
+  text-align: left;
+}
+
+.right-data {
+  text-align: right;
+}
