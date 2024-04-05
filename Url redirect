@@ -1,0 +1,24 @@
+import { Router } from '@angular/router';
+import { HostListener } from '@angular/core';
+
+@Component({
+  selector: 'app-your-component',
+  templateUrl: './your-component.component.html',
+  styleUrls: ['./your-component.component.css']
+})
+export class YourComponent {
+
+  constructor(private router: Router) { }
+
+  handleLinkClick(event: MouseEvent): void {
+    const clickedElement = event.target as HTMLElement;
+    const href = clickedElement.getAttribute('href');
+    
+    if (href && href.startsWith(window.location.origin)) {
+      event.preventDefault();
+      const urlTree = this.router.parseUrl(href);
+      const urlWithoutParams = urlTree.root.children['primary'].segments.map(segment => segment.path).join('/');
+      this.router.navigateByUrl(urlWithoutParams);
+    }
+  }
+}
