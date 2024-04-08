@@ -1,0 +1,53 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        IEnumerable<int> enumerable = GetEnumerable();
+
+        ConcurrentBag<int> bag = new ConcurrentBag<int>();
+
+        // Adjust the batch size as needed
+        int batchSize = 100;
+
+        // Process the enumerable in batches
+        Parallel.ForEach(
+            enumerable.Batch(batchSize),  // Extension method to split the enumerable into batches
+            batch =>
+            {
+                foreach (var item in batch)
+                {
+                    bag.Add(item);
+                }
+            });
+
+        // Now, 'bag' contains all the elements from 'enumerable'
+        Console.WriteLine("Bag size: " + bag.Count);
+    }
+
+    static IEnumerable<int> GetEnumerable()
+    {
+        // Dummy method returning an IEnumerable<int> (Replace this with your actual method)
+        for (int i = 0; i < 1000000; i++)
+        {
+            yield return i;
+        }
+    }
+}
+
+public static class Extensions
+{
+    public static IEnumerable<IEnumerable<T>> Batch<T>(this IEnumerable<T> source, int size)
+    {
+        while (source.Any())
+        {
+            yield return source.Take(size);
+            source = source.Skip(size);
+        }
+    }
+}
