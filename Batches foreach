@@ -51,3 +51,99 @@ public static class Extensions
         }
     }
 }
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        IEnumerable<Parent> originalParents = GetOriginalParents();
+        IEnumerable<UpdateChild> updateChildren = GetUpdateChildren();
+
+        // Update the children objects in the original parents with values from the update collection
+        IEnumerable<Parent> updatedParents = originalParents.Select(parent =>
+        {
+            parent.Children = parent.Children.Select(child =>
+            {
+                UpdateChild updateChild = updateChildren.FirstOrDefault(update => update.ChildId == child.Id);
+                if (updateChild != null)
+                {
+                    child.Name = updateChild.Name;
+                    child.Age = updateChild.Age;
+                }
+                return child;
+            }).ToList(); // Convert the updated children back to a list
+            return parent;
+        });
+
+        // Now, 'updatedParents' contains the original parents with updated children
+        foreach (var parent in updatedParents)
+        {
+            Console.WriteLine($"Parent: {parent.Name}");
+            foreach (var child in parent.Children)
+            {
+                Console.WriteLine($"Child: {child.Name}, Age: {child.Age}");
+            }
+        }
+    }
+
+    static IEnumerable<Parent> GetOriginalParents()
+    {
+        // Dummy method returning original parents with children
+        return new List<Parent>
+        {
+            new Parent
+            {
+                Name = "Parent 1",
+                Children = new List<Child>
+                {
+                    new Child { Id = 1, Name = "Child 1", Age = 5 },
+                    new Child { Id = 2, Name = "Child 2", Age = 7 }
+                }
+            },
+            new Parent
+            {
+                Name = "Parent 2",
+                Children = new List<Child>
+                {
+                    new Child { Id = 3, Name = "Child 3", Age = 6 },
+                    new Child { Id = 4, Name = "Child 4", Age = 8 }
+                }
+            }
+        };
+    }
+
+    static IEnumerable<UpdateChild> GetUpdateChildren()
+    {
+        // Dummy method returning updated children
+        return new List<UpdateChild>
+        {
+            new UpdateChild { ChildId = 2, Name = "Updated Child 2", Age = 10 },
+            new UpdateChild { ChildId = 4, Name = "Updated Child 4", Age = 12 }
+        };
+    }
+}
+
+class Parent
+{
+    public string Name { get; set; }
+    public IEnumerable<Child> Children { get; set; }
+}
+
+class Child
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Age { get; set; }
+}
+
+class UpdateChild
+{
+    public int ChildId { get; set; }
+    public string Name { get; set; }
+    public int Age { get; set; }
+}
