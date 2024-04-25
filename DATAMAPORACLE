@@ -1,0 +1,67 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using Oracle.ManagedDataAccess.Client;
+
+public static class DataReaderExtensions
+{
+    public static Dictionary<string, List<T>> MapToClass<T>(this OracleParameterCollection parameters) where T : new()
+    {
+        Dictionary<string, List<T>> results = new Dictionary<string, List<T>>();
+
+        foreach (OracleParameter parameter in parameters)
+        {
+            if (parameter.OracleDbType == OracleDbType.RefCursor && parameter.Direction == ParameterDirection.Output)
+            {
+                string parameterName = parameter.ParameterName;
+                string key = parameterName.Substring(1); // Remove "@" from parameter name
+                using (OracleDataReader reader = ((OracleRefCursor)parameter.Value).GetDataReader())
+                {
+                    var result = MapResultSetToClass<T>(reader);
+                    results[key] = result;
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private static List<T> MapResultSetToClass<T>(OracleDataReader reader) where T : new()
+    {
+        List<T> result = new List<T>();
+
+        var properties = typeof(T).GetProperties();
+
+        while (reader.Read())
+        {
+            T obj = new T();
+
+            foreach (var property in properties)
+            {
+                try
+                {
+                    if (property.CanWrite)
+                    {
+                        var value = reader[property.Name];
+                        if (value != DBNull.Value)
+                        {
+                            property.SetValue(obj, value);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle property mapping exceptions
+                    Console.WriteLine($"Error mapping property '{property.Name}': {ex.Message}");
+                }
+            }
+
+            result.Add(obj);
+        }
+
+        return result;
+    }
+}
+ // Map the result sets to MyClass objects
+                var results = command.Parameters.MapToClass<Class1>();
+                var results2 = command.Parameters.MapToClass<Class2>();
