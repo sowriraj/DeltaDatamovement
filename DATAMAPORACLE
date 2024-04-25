@@ -1,32 +1,28 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
 
 public static class DataReaderExtensions
 {
-    public static Dictionary<string, List<T>> MapToClass<T>(this OracleParameterCollection parameters) where T : new()
+    public static Dictionary<string, List<T>> MapToClass<T>(this IDataParameterCollection parameters) where T : new()
     {
         Dictionary<string, List<T>> results = new Dictionary<string, List<T>>();
 
-        foreach (OracleParameter parameter in parameters)
+        foreach (IDataParameter parameter in parameters)
         {
-            if (parameter.OracleDbType == OracleDbType.RefCursor && parameter.Direction == ParameterDirection.Output)
+            if (parameter.DbType == DbType.Object && parameter.Value is IDataReader reader)
             {
                 string parameterName = parameter.ParameterName;
                 string key = parameterName.Substring(1); // Remove "@" from parameter name
-                using (OracleDataReader reader = ((OracleRefCursor)parameter.Value).GetDataReader())
-                {
-                    var result = MapResultSetToClass<T>(reader);
-                    results[key] = result;
-                }
+                var result = MapResultSetToClass<T>(reader);
+                results[key] = result;
             }
         }
 
         return results;
     }
 
-    private static List<T> MapResultSetToClass<T>(OracleDataReader reader) where T : new()
+    private static List<T> MapResultSetToClass<T>(IDataReader reader) where T : new()
     {
         List<T> result = new List<T>();
 
@@ -62,6 +58,3 @@ public static class DataReaderExtensions
         return result;
     }
 }
- // Map the result sets to MyClass objects
-                var results = command.Parameters.MapToClass<Class1>();
-                var results2 = command.Parameters.MapToClass<Class2>();
