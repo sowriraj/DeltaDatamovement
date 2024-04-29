@@ -1,0 +1,40 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using Oracle.DataAccess.Client;
+
+public class MyClass
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    // Add other properties as needed
+}
+
+public class MyClassConverter
+{
+    public List<MyClass> ConvertRefCursorToObjectList(IDataParameterCollection parameters)
+    {
+        List<MyClass> resultList = new List<MyClass>();
+
+        foreach (IDataParameter parameter in parameters)
+        {
+            if (parameter is OracleParameter oracleParameter && oracleParameter.OracleDbType == OracleDbType.RefCursor)
+            {
+                using (OracleDataReader reader = ((OracleRefCursor)oracleParameter.Value).GetDataReader())
+                {
+                    while (reader.Read())
+                    {
+                        MyClass obj = new MyClass();
+                        obj.Id = Convert.ToInt32(reader["Id"]);
+                        obj.Name = reader["Name"].ToString();
+                        // Map other properties similarly
+
+                        resultList.Add(obj);
+                    }
+                }
+            }
+        }
+
+        return resultList;
+    }
+}
