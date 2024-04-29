@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.Data.OracleClient; // Use appropriate namespace for your Oracle data provider
+
+public static class OracleDataReaderExtensions
+{
+    public static IEnumerable<T> ToEnumerable<T>(this OracleDataReader reader, Func<OracleDataReader, T> mapFunc)
+    {
+        while (reader.Read())
+        {
+            yield return mapFunc(reader);
+        }
+    }
+}
+
+// Usage example
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Assuming you have created and opened your OracleDataReader named 'reader'
+        OracleDataReader reader = GetOracleDataReader();
+
+        // Define your mapping function
+        Func<OracleDataReader, YourClass> mapFunc = (r) =>
+        {
+            // Map OracleDataReader to YourClass here
+            // Example:
+            return new YourClass
+            {
+                Property1 = r["Column1"],
+                Property2 = r["Column2"],
+                // Map other properties as needed
+            };
+        };
+
+        // Use the extension method to project the OracleDataReader into IEnumerable<YourClass>
+        IEnumerable<YourClass> result = reader.ToEnumerable(mapFunc);
+
+        // Now you can use 'result' as your collection of YourClass objects
+    }
+}
