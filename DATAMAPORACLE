@@ -1,60 +1,92 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Reflection;
+using Oracle.ManagedDataAccess.Client;
 
-public static class DataReaderExtensions
+public static class OracleDataReaderExtensions
 {
-    public static Dictionary<string, List<T>> MapToClass<T>(this IDataParameterCollection parameters) where T : new()
+    public static IEnumerable<T> MapToClass<T>(this OracleDataReader reader, Func<OracleDataReader, T> mapFunction)
     {
-        Dictionary<string, List<T>> results = new Dictionary<string, List<T>>();
-
-        foreach (IDataParameter parameter in parameters)
-        {
-            if (parameter.DbType == DbType.Object && parameter.Value is IDataReader reader)
-            {
-                string parameterName = parameter.ParameterName;
-                string key = parameterName.Substring(1); // Remove "@" from parameter name
-                var result = MapResultSetToClass<T>(reader);
-                results[key] = result;
-            }
-        }
-
-        return results;
-    }
-
-    private static List<T> MapResultSetToClass<T>(IDataReader reader) where T : new()
-    {
-        List<T> result = new List<T>();
-
-        var properties = typeof(T).GetProperties();
-
         while (reader.Read())
         {
-            T obj = new T();
+            yield return mapFunction(reader);
+        }
+    }
 
-            foreach (var property in properties)
+    public static T ReadAllProperties<T>(this OracleDataReader reader) where T : new()
+    {
+        T obj = new T();
+
+        var properties = typeof(T).GetProperties();
+        foreach (var property in properties)
+        {
+            try
             {
-                try
+                if (property.CanWrite)
                 {
-                    if (property.CanWrite)
+                    var value = reader[property.Name];
+                    if (value != DBNull.Value)
                     {
-                        var value = reader[property.Name];
-                        if (value != DBNull.Value)
-                        {
-                            property.SetValue(obj, value);
-                        }
+                        property.SetValue(obj, value);
                     }
                 }
-                catch (Exception ex)
-                {
-                    // Handle property mapping exceptions
-                    Console.WriteLine($"Error mapping property '{property.Name}': {ex.Message}");
-                }
             }
-
-            result.Add(obj);
+            catch (Exception ex)
+            {
+                // Handle property mapping exceptions
+                Console.WriteLine($"Error mapping property '{property.Name}': {ex.Message}");
+            }
         }
 
-        return result;
+        return obj;
     }
 }
+
+using System;
+using System.Collections.Generic;
+using Oracle.ManagedDataAccess.Client;
+
+// Example class to map to the result set
+public class MyClass
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    // Add other properties as needed
+}
+
+// Example usage
+public class Program
+{
+    public static void Main()
+    {
+        using (OracleConnection connection = new OracleConnection(connectionString))
+        {
+            connection.Open();
+            using (OracleCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "Your_StoredProcedure_Name";
+                command.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters as needed
+                command.Parameters.Add("refCursor1", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
+
+                // Execute the command and retrieve the OracleRefCursor
+                command.ExecuteNonQuery();
+                var refCursor = (OracleRefCursor)command.Parameters["refCursor1"].Value;
+
+                // Get the OracleDataReader from the OracleRefCursor
+                using (OracleDataReader reader = refCursor.GetDataReader())
+                {
+                    var results = reader.MapToClass(r => r.ReadAllProperties<MyClass>());
+
+                    // Do something with the results
+                    foreach (var item in results)
+                    {
+                        Console.WriteLine($"Id: {item.Id}, Name: {item.Name}");
+                    }
+                }
+            }
+        }
+    }
+}
+
