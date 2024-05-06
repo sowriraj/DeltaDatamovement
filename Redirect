@@ -1,0 +1,28 @@
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <!-- Rule to redirect all requests not from the new application -->
+            <rules>
+                <rule name="Redirect to New Website" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions logicalGrouping="MatchAll">
+                        <!-- Check if the request is not coming from the new application -->
+                        <add input="{HTTP_HOST}" pattern="^newapplication\.com$" negate="true" />
+                    </conditions>
+                    <action type="Redirect" url="http://newwebsite.com/{R:0}" redirectType="Permanent" />
+                </rule>
+            </rules>
+            <!-- Rule to allow requests from the new application to the classic application -->
+            <rules>
+                <rule name="Allow Requests from New Application" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions>
+                        <!-- Check if the request is coming from the new application -->
+                        <add input="{HTTP_HOST}" pattern="^newapplication\.com$" />
+                    </conditions>
+                    <action type="None" />
+                </rule>
+            </rules>
+        </rewrite>
+    </system.webServer>
+</configuration>you
