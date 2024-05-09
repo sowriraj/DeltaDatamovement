@@ -1,1 +1,6 @@
 ^/WebApps/LoanIQInternalWebsite(?:\/[^.]+)?(?:\/(?!(?:default\.aspx\?rel=new)).+)?\/?$
+^/WebApps/Loaniqinternalwebsite(?:\/?|\/Default\.aspx\?rel=new)?$
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^(?!WebApps/Loaniqinternalwebsite/Default\.aspx\?rel=new$).*" />
+    <action type="Redirect" url="your_different_url_here" />
+</rule>
