@@ -1,1 +1,1 @@
-^/WebApps/LoanIQInternalWebsite(?:\/[^.]+)?(?:\/default\.aspx\?rel=new)?\/?$
+^/WebApps/LoanIQInternalWebsite(?:\/[^.]+)?(?:\/(?!(?:default\.aspx\?rel=new)).+)?\/?$
