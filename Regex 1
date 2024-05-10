@@ -19,3 +19,26 @@
     </conditions>
     <action type="Redirect" url="your_new_url_here" />
 </rule>
+<rewrite>
+    <rules>
+        <rule name="Redirect Subpath Application" stopProcessing="true">
+            <match url="^subpath(/.*)?" />
+            <conditions>
+                <add input="{REQUEST_URI}" pattern="^/subpath/home.aspx$" negate="true" />
+            </conditions>
+            <action type="Redirect" url="https://newurl.com{R:0}" redirectType="Permanent" />
+        </rule>
+    </rules>
+</rewrite>
+
+<rewrite>
+    <rules>
+        <rule name="Redirect Subpath Application" stopProcessing="true">
+            <match url="^subpath(/.*)?" />
+            <conditions>
+                <add input="{REQUEST_URI}" pattern="^/subpath/home.aspx$" negate="true" />
+            </conditions>
+            <action type="Redirect" url="https://newurl.com{R:0}" redirectType="Permanent" />
+        </rule>
+    </rules>
+</rewrite>
