@@ -19,3 +19,17 @@
     </conditions>
     <action type="Redirect" url="your_different_url_here" />
 </rule>
+
+
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^WebApps/Loaniqinternalwebsite/?$" />
+    <action type="Redirect" url="your_redirect_url_here" />
+</rule>
+
+<rule name="Exclude Specific URL" stopProcessing="true">
+    <match url="^WebApps/Loaniqinternalwebsite$" />
+    <conditions logicalGrouping="MatchAll" trackAllCaptures="false">
+        <add input="{QUERY_STRING}" pattern="^Default\.aspx\?rel=new$" />
+    </conditions>
+    <action type="None" />
+</rule>
