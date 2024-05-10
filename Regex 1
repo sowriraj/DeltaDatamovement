@@ -10,3 +10,12 @@
     </conditions>
     <action type="None" />
 </rule>
+
+
+<rule name="Redirect URLs without Parameters" stopProcessing="true">
+    <match url="(.*)" />
+    <conditions>
+        <add input="{QUERY_STRING}" pattern="^$" />
+    </conditions>
+    <action type="Redirect" url="your_new_url_here" />
+</rule>
