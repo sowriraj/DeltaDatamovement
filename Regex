@@ -4,3 +4,18 @@
     <match url="^(?!WebApps/Loaniqinternalwebsite/Default\.aspx\?rel=new$).*" />
     <action type="Redirect" url="your_different_url_here" />
 </rule>
+
+
+
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^WebApps/Loaniqinternalwebsite(?:\/?|\/\?Default\.aspx\?rel=new)?$" />
+    <action type="None" />
+</rule>
+
+<rule name="Redirect to Different URL for Other URLs" stopProcessing="true">
+    <match url=".*" />
+    <conditions logicalGrouping="MatchAll" trackAllCaptures="false">
+        <add input="{REQUEST_URI}" pattern="^WebApps/Loaniqinternalwebsite(?:\/?|\/\?Default\.aspx\?rel=new)?$" negate="true" />
+    </conditions>
+    <action type="Redirect" url="your_different_url_here" />
+</rule>
