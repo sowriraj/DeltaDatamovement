@@ -41,3 +41,8 @@
     </conditions>
     <action type="Redirect" url="your_redirect_url_here" />
 </rule>
+
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^WebApps/LoanIQInternalWebsite/(?!Default\.aspx\?rel=new)(.*)" />
+    <action type="Redirect" url="your_redirect_url_here" />
+</rule>
