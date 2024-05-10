@@ -46,3 +46,17 @@
     <match url="^WebApps/LoanIQInternalWebsite/(?!Default\.aspx\?rel=new)(.*)" />
     <action type="Redirect" url="your_redirect_url_here" />
 </rule>
+
+
+<rule name="Exclude Specific URL" stopProcessing="true">
+    <match url="^WebApps/LoanIQInternalWebsite/Default\.aspx$" />
+    <conditions>
+        <add input="{QUERY_STRING}" pattern="^rel=new$" />
+    </conditions>
+    <action type="None" />
+</rule>
+
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^WebApps/LoanIQInternalWebsite/(.*)" />
+    <action type="Redirect" url="your_redirect_url_here" />
+</rule>
