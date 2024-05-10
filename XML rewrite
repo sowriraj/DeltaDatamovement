@@ -1,0 +1,15 @@
+<rule name="Rewrite Specific URL" stopProcessing="true">
+    <match url="^WebApps/LoanIQInternalWebsite/Default.aspx$" />
+    <conditions>
+        <add input="{QUERY_STRING}" pattern="^rel=new$" />
+    </conditions>
+    <action type="Rewrite" url="/WebApps/LoanIQInternalWebsite/Default.aspx" />
+</rule>
+
+<rule name="Redirect to Different URL" stopProcessing="true">
+    <match url="^WebApps/LoanIQInternalWebsite/(.*)" />
+    <conditions logicalGrouping="MatchAll" trackAllCaptures="false">
+        <add input="{REQUEST_URI}" pattern="/WebApps/LoanIQInternalWebsite/Default\.aspx$" negate="true" />
+    </conditions>
+    <action type="Redirect" url="your_redirect_url_here" />
+</rule>
