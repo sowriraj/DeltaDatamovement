@@ -1,0 +1,29 @@
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  hardcodedValue: string = 'CoRp'; // Hardcoded value
+  userText: string = ''; // User-entered text
+
+  // Get the combined value
+  get combinedValue(): string {
+    return this.hardcodedValue + this.userText;
+  }
+
+  // Update user text while maintaining the hardcoded value
+  onInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+
+    // Ensure the hardcoded value is at the start
+    if (value.startsWith(this.hardcodedValue)) {
+      this.userText = value.slice(this.hardcodedValue.length);
+    } else {
+      input.value = this.combinedValue;
+    }
+  }
+}
