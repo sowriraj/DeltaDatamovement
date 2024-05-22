@@ -1,0 +1,27 @@
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class LocalStorageService {
+
+  private USER_PROFILE_KEY = 'userProfile';
+
+  constructor() { }
+
+  // Save user profile details to local storage
+  setUserProfile(userProfile: any): void {
+    localStorage.setItem(this.USER_PROFILE_KEY, JSON.stringify(userProfile));
+  }
+
+  // Get user profile details from local storage
+  getUserProfile(): any {
+    const userProfile = localStorage.getItem(this.USER_PROFILE_KEY);
+    return userProfile ? JSON.parse(userProfile) : null;
+  }
+
+  // Remove user profile details from local storage
+  removeUserProfile(): void {
+    localStorage.removeItem(this.USER_PROFILE_KEY);
+  }
+}
