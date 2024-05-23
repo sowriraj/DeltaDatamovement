@@ -1,0 +1,52 @@
+using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
+namespace ClientCredentialsExample
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            string tokenEndpoint = "https://your-auth-server.com/connect/token"; // Replace with your token endpoint
+            string clientId = "your-client-id"; // Replace with your client ID
+            string clientSecret = "your-client-secret"; // Replace with your client secret
+            string scope = "your-scope"; // Replace with the scope you need
+
+            var token = await GetAccessTokenAsync(tokenEndpoint, clientId, clientSecret, scope);
+            Console.WriteLine($"Access Token: {token}");
+        }
+
+        public static async Task<string> GetAccessTokenAsync(string tokenEndpoint, string clientId, string clientSecret, string scope)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "grant_type", "client_credentials" },
+                    { "client_id", clientId },
+                    { "client_secret", clientSecret },
+                    { "scope", scope }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+
+                var response = await httpClient.PostAsync(tokenEndpoint, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    // Parse the JSON response to extract the access token
+                    var tokenResponse = System.Text.Json.JsonDocument.Parse(responseContent);
+                    return tokenResponse.RootElement.GetProperty("access_token").GetString();
+                }
+                else
+                {
+                    throw new Exception($"Error retrieving access token: {response.ReasonPhrase}");
+                }
+            }
+        }
+    }
+}
