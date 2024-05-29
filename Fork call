@@ -1,0 +1,108 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class FirstService {
+  private firstDataSubject = new BehaviorSubject<any>(null);
+  firstData$ = this.firstDataSubject.asObservable();
+
+  constructor(private http: HttpClient) {}
+
+  getFirstData(): Observable<any> {
+    return this.http.get<any>('https://api.example.com/first-data').pipe(
+      tap(data => this.firstDataSubject.next(data))
+    );
+  }
+}
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class SecondService {
+  private secondDataSubject = new BehaviorSubject<any>(null);
+  secondData$ = this.secondDataSubject.asObservable();
+
+  constructor(private http: HttpClient) {}
+
+  getSecondData(): Observable<any> {
+    return this.http.get<any>('https://api.example.com/second-data').pipe(
+      tap(data => this.secondDataSubject.next(data))
+    );
+  }
+
+  updateSecondData(updatedData: any): void {
+    this.secondDataSubject.next(updatedData);
+  }
+}
+
+import { Component, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
+import { FirstService } from './first.service';
+import { SecondService } from './second.service';
+
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  styleUrls: ['./my-component.component.css']
+})
+export class MyComponent implements OnInit {
+  firstData: any;
+  secondData: any;
+
+  constructor(
+    private firstService: FirstService,
+    private secondService: SecondService
+  ) {}
+
+  ngOnInit(): void {
+    // Fetch initial data for both API calls in parallel using forkJoin
+    forkJoin([
+      this.firstService.getFirstData(),
+      this.secondService.getSecondData()
+    ]).subscribe(([firstData, secondData]) => {
+      this.firstData = firstData;
+      this.secondData = secondData;
+
+      // Update second data if isAdmin is true
+      if (this.firstData.isAdmin) {
+        const updatedSecondData = { ...secondData, additionalField: 'admin-specific-value' };
+        this.secondService.updateSecondData(updatedSecondData);
+      }
+    });
+
+    // Subscribe to firstData$ to keep local state updated and reactively update second data
+    this.firstService.firstData$.pipe(
+      switchMap(firstData => {
+        if (firstData && firstData.isAdmin) {
+          return this.secondService.getSecondData().pipe(
+            tap(secondData => {
+              const updatedSecondData = { ...secondData, additionalField: 'admin-specific-value' };
+              this.secondService.updateSecondData(updatedSecondData);
+            })
+          );
+        } else {
+          return this.secondService.secondData$;
+        }
+      })
+    ).subscribe();
+
+    // Subscribe to firstData$ to keep local state updated
+    this.firstService.firstData$.subscribe(data => {
+      this.firstData = data;
+    });
+
+    // Subscribe to secondData$ to keep local state updated
+    this.secondService.secondData$.subscribe(data => {
+      this.secondData = data;
+    });
+  }
+}
