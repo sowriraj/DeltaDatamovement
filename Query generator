@@ -1,0 +1,134 @@
+using System;
+using System.Data;
+using Microsoft.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
+
+namespace DatabaseSyncApp
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string sqlServerConnectionString = "your-sqlserver-connection-string";
+            string oracleConnectionString = "your-oracle-connection-string";
+            string sourceTable = "SourceTable";
+            string targetTable = "TargetTable";
+            string primaryKey = "PrimaryKeyColumn"; // Primary key column name
+
+            GenerateSqlScripts(sqlServerConnectionString, oracleConnectionString, sourceTable, targetTable, primaryKey);
+        }
+
+        static void GenerateSqlScripts(string sqlServerConnectionString, string oracleConnectionString, string sourceTable, string targetTable, string primaryKey)
+        {
+            DataTable sourceData = GetSqlServerData(sqlServerConnectionString, sourceTable);
+            DataTable targetData = GetOracleData(oracleConnectionString, targetTable);
+
+            string insertScript = GenerateInsertScript(sourceData, targetTable, primaryKey, targetData);
+            string updateScript = GenerateUpdateScript(sourceData, targetTable, primaryKey, targetData);
+
+            System.IO.File.WriteAllText("InsertScript.sql", insertScript);
+            System.IO.File.WriteAllText("UpdateScript.sql", updateScript);
+
+            Console.WriteLine("Scripts generated successfully.");
+        }
+
+        static DataTable GetSqlServerData(string connectionString, string tableName)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                string query = $"SELECT * FROM {tableName}";
+                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
+                DataTable dataTable = new DataTable();
+                adapter.Fill(dataTable);
+                return dataTable;
+            }
+        }
+
+        static DataTable GetOracleData(string connectionString, string tableName)
+        {
+            using (OracleConnection connection = new OracleConnection(connectionString))
+            {
+                connection.Open();
+                string query = $"SELECT * FROM {tableName}";
+                OracleDataAdapter adapter = new OracleDataAdapter(query, connection);
+                DataTable dataTable = new DataTable();
+                adapter.Fill(dataTable);
+                return dataTable;
+            }
+        }
+
+        static string GenerateInsertScript(DataTable sourceData, string targetTable, string primaryKey, DataTable targetData)
+        {
+            var insertScript = new System.Text.StringBuilder();
+
+            foreach (DataRow sourceRow in sourceData.Rows)
+            {
+                var primaryKeyValue = sourceRow[primaryKey].ToString();
+                bool existsInTarget = false;
+
+                foreach (DataRow targetRow in targetData.Rows)
+                {
+                    if (targetRow[primaryKey].ToString() == primaryKeyValue)
+                    {
+                        existsInTarget = true;
+                        break;
+                    }
+                }
+
+                if (!existsInTarget)
+                {
+                    insertScript.AppendLine(GenerateInsertStatement(sourceRow, targetTable));
+                }
+            }
+
+            return insertScript.ToString();
+        }
+
+        static string GenerateUpdateScript(DataTable sourceData, string targetTable, string primaryKey, DataTable targetData)
+        {
+            var updateScript = new System.Text.StringBuilder();
+
+            foreach (DataRow sourceRow in sourceData.Rows)
+            {
+                var primaryKeyValue = sourceRow[primaryKey].ToString();
+
+                foreach (DataRow targetRow in targetData.Rows)
+                {
+                    if (targetRow[primaryKey].ToString() == primaryKeyValue && !RowsAreEqual(sourceRow, targetRow))
+                    {
+                        updateScript.AppendLine(GenerateUpdateStatement(sourceRow, targetTable, primaryKey));
+                        break;
+                    }
+                }
+            }
+
+            return updateScript.ToString();
+        }
+
+        static string GenerateInsertStatement(DataRow row, string tableName)
+        {
+            var columns = string.Join(", ", row.Table.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            var values = string.Join(", ", row.ItemArray.Select(v => $"'{v.ToString().Replace("'", "''")}'"));
+            return $"INSERT INTO {tableName} ({columns}) VALUES ({values});";
+        }
+
+        static string GenerateUpdateStatement(DataRow row, string tableName, string primaryKey)
+        {
+            var setClause = string.Join(", ", row.Table.Columns.Cast<DataColumn>().Select(c => $"{c.ColumnName} = '{row[c].ToString().Replace("'", "''")}'"));
+            return $"UPDATE {tableName} SET {setClause} WHERE {primaryKey} = '{row[primaryKey].ToString().Replace("'", "''")}';";
+        }
+
+        static bool RowsAreEqual(DataRow row1, DataRow row2)
+        {
+            foreach (DataColumn column in row1.Table.Columns)
+            {
+                if (!row1[column].Equals(row2[column]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+}
