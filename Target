@@ -1,0 +1,118 @@
+using System;
+using System.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
+using Dapper;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace DataSyncApp
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string sqlConnectionString = "your-sql-server-connection-string";
+            string oracleConnectionString = "your-oracle-connection-string";
+            string sourceTable = "SourceTable";
+            string targetTable = "TargetTable";
+            string primaryKey = "Id";
+
+            var sourceData = FetchSourceData(sqlConnectionString, sourceTable);
+            var targetData = FetchTargetData(oracleConnectionString, targetTable);
+
+            var insertScripts = GenerateInsertScripts(sourceData, targetData, targetTable, primaryKey);
+            var updateScripts = GenerateUpdateScripts(sourceData, targetData, targetTable, primaryKey);
+
+            WriteToFile("InsertScripts.sql", insertScripts);
+            WriteToFile("UpdateScripts.sql", updateScripts);
+
+            Console.WriteLine("Scripts generated successfully.");
+        }
+
+        static IEnumerable<dynamic> FetchSourceData(string connectionString, string tableName)
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                return connection.Query($"SELECT * FROM {tableName}");
+            }
+        }
+
+        static IEnumerable<dynamic> FetchTargetData(string connectionString, string tableName)
+        {
+            using (var connection = new OracleConnection(connectionString))
+            {
+                connection.Open();
+                return connection.Query($"SELECT * FROM {tableName}");
+            }
+        }
+
+        static List<string> GenerateInsertScripts(IEnumerable<dynamic> sourceData, IEnumerable<dynamic> targetData, string tableName, string primaryKey)
+        {
+            var targetPrimaryKeys = targetData.Select(d => ((IDictionary<string, object>)d)[primaryKey].ToString().ToUpper()).ToHashSet();
+            var insertScripts = new List<string>();
+
+            foreach (var row in sourceData)
+            {
+                var primaryKeyValue = ((IDictionary<string, object>)row)[primaryKey].ToString().ToUpper();
+                if (!targetPrimaryKeys.Contains(primaryKeyValue))
+                {
+                    var columns = ((IDictionary<string, object>)row).Keys;
+                    var values = ((IDictionary<string, object>)row).Values;
+
+                    var normalizedValues = values.Select(v => v != null ? v.ToString().ToUpper() : null);
+
+                    var insertStatement = new StringBuilder();
+                    insertStatement.AppendLine($"INSERT INTO {tableName} ({string.Join(", ", columns)}) VALUES ({string.Join(", ", normalizedValues.Select(v => $"'{v}'"))});");
+
+                    insertScripts.Add(insertStatement.ToString());
+                }
+            }
+
+            return insertScripts;
+        }
+
+        static List<string> GenerateUpdateScripts(IEnumerable<dynamic> sourceData, IEnumerable<dynamic> targetData, string tableName, string primaryKey)
+        {
+            var updateScripts = new List<string>();
+
+            var targetDataDict = targetData.ToDictionary(d => ((IDictionary<string, object>)d)[primaryKey].ToString().ToUpper(), d => (IDictionary<string, object>)d);
+
+            foreach (var row in sourceData)
+            {
+                var primaryKeyValue = ((IDictionary<string, object>)row)[primaryKey].ToString().ToUpper();
+                if (targetDataDict.TryGetValue(primaryKeyValue, out IDictionary<string, object> targetRow))
+                {
+                    var updates = new List<string>();
+                    foreach (var column in ((IDictionary<string, object>)row).Keys)
+                    {
+                        var sourceValue = ((IDictionary<string, object>)row)[column]?.ToString().ToUpper();
+                        var targetValue = targetRow[column]?.ToString().ToUpper();
+
+                        if (!Equals(sourceValue, targetValue))
+                        {
+                            updates.Add($"{column} = '{sourceValue}'");
+                        }
+                    }
+
+                    if (updates.Any())
+                    {
+                        var updateStatement = new StringBuilder();
+                        updateStatement.AppendLine($"UPDATE {tableName} SET {string.Join(", ", updates)} WHERE {primaryKey} = '{primaryKeyValue}';");
+
+                        updateScripts.Add(updateStatement.ToString());
+                    }
+                }
+            }
+
+            return updateScripts;
+        }
+
+        static void WriteToFile(string filePath, List<string> scripts)
+        {
+            File.WriteAllLines(filePath, scripts);
+        }
+    }
+}
