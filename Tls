@@ -1,0 +1,13 @@
+spec:
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+    key: tls.key
+    certificate: tls.crt
+    caCertificate: ca.crt
+    key: |
+      oc get secret my-cert-secret -o jsonpath='{.data.tls\.key}' | base64 --decode
+    certificate: |
+      oc get secret my-cert-secret -o jsonpath='{.data.tls\.crt}' | base64 --decode
+    caCertificate: |
+      oc get secret my-cert-secret -o jsonpath='{.data.ca\.crt}' | base64 --decode
