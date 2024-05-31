@@ -1,0 +1,99 @@
+using System;
+using System.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
+using Dapper;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace DataSyncApp
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string sqlConnectionString = "your-sql-server-connection-string";
+            string oracleConnectionString = "your-oracle-connection-string";
+            string sourceTable = "SourceTable";
+            string targetTable = "TargetTable";
+            string primaryKey = "Id";
+
+            var sourceData = FetchSourceData(sqlConnectionString, sourceTable);
+            var targetData = FetchTargetData(oracleConnectionString, targetTable);
+
+            var mergeScripts = GenerateMergeScripts(sourceData, targetData, targetTable, primaryKey);
+
+            WriteToFile("MergeScripts.sql", mergeScripts);
+
+            Console.WriteLine("Scripts generated successfully.");
+        }
+
+        static IEnumerable<dynamic> FetchSourceData(string connectionString, string tableName)
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                return connection.Query($"SELECT * FROM {tableName}");
+            }
+        }
+
+        static IEnumerable<dynamic> FetchTargetData(string connectionString, string tableName)
+        {
+            using (var connection = new OracleConnection(connectionString))
+            {
+                connection.Open();
+                return connection.Query($"SELECT * FROM {tableName}");
+            }
+        }
+
+        static List<string> GenerateMergeScripts(IEnumerable<dynamic> sourceData, IEnumerable<dynamic> targetData, string tableName, string primaryKey)
+        {
+            var mergeScripts = new List<string>();
+
+            foreach (var row in sourceData)
+            {
+                var rowDict = (IDictionary<string, object>)row;
+                if (rowDict.ContainsKey(primaryKey))
+                {
+                    var primaryKeyValue = rowDict[primaryKey]?.ToString().ToUpper();
+                    var columns = rowDict.Keys;
+                    var values = columns.Select(column => FormatValue(rowDict[column], column));
+
+                    var mergeStatement = new StringBuilder();
+                    mergeStatement.AppendLine($"MERGE INTO {tableName} t");
+                    mergeStatement.AppendLine($"USING (SELECT {string.Join(", ", values)} AS VALUES FROM dual) s");
+                    mergeStatement.AppendLine($"ON (t.{primaryKey} = s.{primaryKey})");
+                    mergeStatement.AppendLine("WHEN NOT MATCHED THEN");
+                    mergeStatement.AppendLine($"INSERT ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)});");
+
+                    mergeScripts.Add(mergeStatement.ToString());
+                }
+            }
+
+            return mergeScripts;
+        }
+
+        static string FormatValue(object value, string columnName)
+        {
+            if (value == null) return "NULL";
+
+            if (value is bool)
+            {
+                return (bool)value ? "1" : "0";
+            }
+
+            if (value is DateTime)
+            {
+                return $"TO_DATE('{((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss")}', 'YYYY-MM-DD HH24:MI:SS')";
+            }
+
+            return $"'{value.ToString().ToUpper()}'";
+        }
+
+        static void WriteToFile(string filePath, List<string> scripts)
+        {
+            File.WriteAllLines(filePath, scripts);
+        }
+    }
+}
