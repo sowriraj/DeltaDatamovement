@@ -1,1 +1,231 @@
 
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using OfficeOpenXml;
+
+public class GenerateReportModel : PageModel
+{
+    private readonly string _connectionString = "YourDatabaseConnectionString";
+
+    [BindProperty]
+    public string SqlScript { get; set; }
+
+    [BindProperty]
+    public List<string> Columns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public List<string> SelectedColumns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public string SelectedStoredProcedure { get; set; }
+
+    [BindProperty]
+    public Dictionary<string, string> StoredProcedureParameters { get; set; } = new Dictionary<string, string>();
+
+    [BindProperty]
+    public List<string> StoredProcedures { get; set; } = new List<string>();
+
+    public IActionResult OnGet()
+    {
+        LoadStoredProcedures();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostExecuteScriptAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var command = new SqlCommand(SqlScript, connection);
+                var adapter = new SqlDataAdapter(command);
+                await Task.Run(() => adapter.Fill(dataTable));
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing SQL script: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        LoadStoredProcedures();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostExecuteStoredProcedureAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var command = new SqlCommand(SelectedStoredProcedure, connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                foreach (var param in StoredProcedureParameters)
+                {
+                    command.Parameters.AddWithValue(param.Key, param.Value);
+                }
+
+                var adapter = new SqlDataAdapter(command);
+                await Task.Run(() => adapter.Fill(dataTable));
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing stored procedure: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        LoadStoredProcedures();
+        return Page();
+    }
+
+    public IActionResult OnPostGenerateReport()
+    {
+        var dataTable = HttpContext.Session.Get<DataTable>("QueryResult");
+        if (dataTable == null)
+        {
+            ModelState.AddModelError(string.Empty, "No query result found.");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Report");
+
+            for (var i = 0; i < SelectedColumns.Count; i++)
+            {
+                worksheet.Cells[1, i + 1].Value = SelectedColumns[i];
+            }
+
+            var rowIndex = 2;
+            foreach (DataRow row in dataTable.Rows)
+            {
+                for (var i = 0; i < SelectedColumns.Count; i++)
+                {
+                    worksheet.Cells[rowIndex, i + 1].Value = row[SelectedColumns[i]];
+                }
+                rowIndex++;
+            }
+
+            var stream = new MemoryStream(package.GetAsByteArray());
+            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "report.xlsx");
+        }
+    }
+
+    private void LoadStoredProcedures()
+    {
+        using (var connection = new SqlConnection(_connectionString))
+        {
+            var command = new SqlCommand("SELECT name FROM sys.procedures", connection);
+            connection.Open();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    StoredProcedures.Add(reader.GetString(0));
+                }
+            }
+        }
+    }
+}
+
+
+
+@page
+@model GenerateReportModel
+@{
+    ViewData["Title"] = "Generate Report";
+}
+
+<h1>Generate Report</h1>
+
+<form method="post">
+    <div>
+        <label for="SqlScript">Enter SQL Script</label>
+        <textarea id="SqlScript" name="SqlScript" asp-for="SqlScript"></textarea>
+        <span asp-validation-for="SqlScript" class="text-danger"></span>
+    </div>
+    <button type="submit" asp-page-handler="ExecuteScript">Execute Script</button>
+</form>
+
+<h2>Or</h2>
+
+<form method="post">
+    <div>
+        <label for="SelectedStoredProcedure">Select Stored Procedure</label>
+        <select id="SelectedStoredProcedure" name="SelectedStoredProcedure" asp-for="SelectedStoredProcedure">
+            @foreach (var procedure in Model.StoredProcedures)
+            {
+                <option value="@procedure">@procedure</option>
+            }
+        </select>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SelectedStoredProcedure))
+    {
+        <div>
+            <h3>Enter Parameters</h3>
+            <!-- Here you would dynamically generate inputs based on the selected stored procedure's parameters -->
+            <!-- For simplicity, we'll assume two parameters, param1 and param2 -->
+            <div>
+                <label for="param1">Parameter 1</label>
+                <input id="param1" name="StoredProcedureParameters[param1]" type="text" />
+            </div>
+            <div>
+                <label for="param2">Parameter 2</label>
+                <input id="param2" name="StoredProcedureParameters[param2]" type="text" />
+            </div>
+        </div>
+    }
+
+    <button type="submit" asp-page-handler="ExecuteStoredProcedure">Execute Stored Procedure</button>
+</form>
+
+@if (Model.Columns.Count > 0)
+{
+    <h3>Select Columns</h3>
+    <form method="post">
+        @foreach (var column in Model.Columns)
+        {
+            <div>
+                <input type="checkbox" name="SelectedColumns" value="@column" /> @column
+            </div>
+        }
+        <button type="submit" asp-page-handler="GenerateReport">Generate Report</button>
+    </form>
+}
+
+<div asp-validation-summary="All" class="text-danger"></div>
+
+
+
+
+@using SqlToExcelReport.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
