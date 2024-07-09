@@ -1,0 +1,379 @@
+public class GenerateReportModel : PageModel
+{
+    private readonly string _connectionString = "YourDatabaseConnectionString";
+
+    [BindProperty]
+    public string SqlScript { get; set; }
+
+    [BindProperty]
+    public List<string> Columns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public List<string> SelectedColumns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public string SelectedStoredProcedure { get; set; }
+
+    [BindProperty]
+    public Dictionary<string, string> StoredProcedureParameters { get; set; } = new Dictionary<string, string>();
+
+    [BindProperty]
+    public List<string> StoredProcedures { get; set; } = new List<string>();
+
+    [BindProperty]
+    public List<ProcedureParameter> ProcedureParameters { get; set; } = new List<ProcedureParameter>();
+
+    public IActionResult OnGet()
+    {
+        LoadStoredProcedures();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostExecuteScriptAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var command = new SqlCommand(SqlScript, connection);
+                var adapter = new SqlDataAdapter(command);
+                await Task.Run(() => adapter.Fill(dataTable));
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing SQL script: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        return Partial("_ColumnsPartial", this);
+    }
+
+    public async Task<IActionResult> OnPostExecuteStoredProcedureAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var command = new SqlCommand(SelectedStoredProcedure, connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                foreach (var param in StoredProcedureParameters)
+                {
+                    var parameter = new SqlParameter(param.Key, param.Value);
+                    command.Parameters.Add(parameter);
+                }
+
+                var adapter = new SqlDataAdapter(command);
+                await Task.Run(() => adapter.Fill(dataTable));
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing stored procedure: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        return Partial("_ColumnsPartial", this);
+    }
+
+    public IActionResult OnPostGetStoredProcedureParameters([FromBody] string storedProcedureName)
+    {
+        var procedureParameters = new List<ProcedureParameter>();
+
+        using (var connection = new SqlConnection(_connectionString))
+        {
+            var query = @"SELECT PARAMETER_NAME, DATA_TYPE
+                          FROM INFORMATION_SCHEMA.PARAMETERS
+                          WHERE SPECIFIC_NAME = @StoredProcedureName";
+            var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@StoredProcedureName", storedProcedureName);
+            connection.Open();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    procedureParameters.Add(new ProcedureParameter
+                    {
+                        Name = reader.GetString(0),
+                        Type = reader.GetString(1)
+                    });
+                }
+            }
+        }
+
+        return new JsonResult(procedureParameters);
+    }
+
+    public IActionResult OnPostGenerateReport()
+    {
+        var dataTable = HttpContext.Session.Get<DataTable>("QueryResult");
+        if (dataTable == null)
+        {
+            ModelState.AddModelError(string.Empty, "No query result found.");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        using (var stream = new MemoryStream())
+        {
+            using (var document = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook))
+            {
+                var workbookPart = document.AddWorkbookPart();
+                workbookPart.Workbook = new Workbook();
+                var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                worksheetPart.Worksheet = new Worksheet(new SheetData());
+                var sheets = document.WorkbookPart.Workbook.AppendChild(new Sheets());
+                var sheet = new Sheet() { Id = document.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Report" };
+                sheets.Append(sheet);
+
+                var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+
+                var headerRow = new Row();
+                foreach (var column in SelectedColumns)
+                {
+                    headerRow.Append(new Cell() { CellValue = new CellValue(column), DataType = CellValues.String });
+                }
+                sheetData.AppendChild(headerRow);
+
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    var newRow = new Row();
+                    foreach (var column in SelectedColumns)
+                    {
+                        newRow.Append(new Cell() { CellValue = new CellValue(row[column].ToString()), DataType = CellValues.String });
+                    }
+                    sheetData.AppendChild(newRow);
+                }
+
+                workbookPart.Workbook.Save();
+            }
+
+            stream.Position = 0;
+            var fileStream = new MemoryStream(stream.ToArray());
+            return File(fileStream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "report.xlsx");
+        }
+    }
+
+    private void LoadStoredProcedures()
+    {
+        using (var connection = new SqlConnection(_connectionString))
+        {
+            var command = new SqlCommand("SELECT name FROM sys.procedures", connection);
+            connection.Open();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    StoredProcedures.Add(reader.GetString(0));
+                }
+            }
+        }
+    }
+
+    public class ProcedureParameter
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+    }
+}
+
+
+
+
+@model GenerateReportModel
+
+@if (Model.Columns.Count > 0)
+{
+    <h3>Select Columns</h3>
+    <form method="post" id="generateReportForm">
+        @foreach (var column in Model.Columns)
+        {
+            <div>
+                <input type="checkbox" name="SelectedColumns" value="@column" /> @column
+            </div>
+        }
+        <button type="submit" asp-page-handler="GenerateReport">Generate Report</button>
+    </form>
+}
+
+
+@page
+@model GenerateReportModel
+@{
+    ViewData["Title"] = "Generate Report";
+}
+
+<h1>Generate Report</h1>
+
+<form method="post" id="executeScriptForm">
+    <div>
+        <label for="SqlScript">Enter SQL Script</label>
+        <textarea id="SqlScript" name="SqlScript" asp-for="SqlScript"></textarea>
+        <span asp-validation-for="SqlScript" class="text-danger"></span>
+    </div>
+    <button type="submit" asp-page-handler="ExecuteScript">Execute Script</button>
+</form>
+
+<h2>Or</h2>
+
+<div>
+    <label for="SelectedStoredProcedure">Select Stored Procedure</label>
+    <select id="SelectedStoredProcedure" name="SelectedStoredProcedure" asp-for="SelectedStoredProcedure" asp-items="@(new SelectList(Model.StoredProcedures))">
+        <option value="">--Select a Stored Procedure--</option>
+    </select>
+</div>
+
+<div id="parametersContainer">
+    @if (Model.ProcedureParameters.Any())
+    {
+        <form method="post" id="executeStoredProcedureForm">
+            <div>
+                <h3>Enter Parameters</h3>
+                @foreach (var param in Model.ProcedureParameters)
+                {
+                    <div>
+                        <label for="@param.Name">@param.Name (@param.Type)</label>
+                        <input id="@param.Name" name="StoredProcedureParameters[@param.Name]" type="text" />
+                    </div>
+                }
+            </div>
+            <button type="submit" asp-page-handler="ExecuteStoredProcedure">Execute Stored Procedure</button>
+        </form>
+    }
+</div>
+
+<div id="columnsContainer">
+    @await Html.PartialAsync("_ColumnsPartial", Model)
+</div>
+
+<input name="__RequestVerificationToken" type="hidden" value="@Antiforgery.GetTokens(HttpContext).RequestToken" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#executeScriptForm').submit(function(event) {
+                event.preventDefault();
+                var form = $(this);
+                var data = form.serialize();
+                var antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Page("/GenerateReport", "ExecuteScript")',
+                    type: 'POST',
+                    data: data,
+                    headers: {
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    success: function(response) {
+                        $('#columnsContainer').html(response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error executing script:', error);
+                    }
+                });
+            });
+
+            $('#SelectedStoredProcedure').change(function() {
+                var selectedStoredProcedure = $(this).val();
+                var antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Page("/GenerateReport", "GetStoredProcedureParameters")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(selectedStoredProcedure),
+                    headers: {
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    success: function(response) {
+                        var parametersContainer = $('#parametersContainer');
+                        parametersContainer.empty();
+
+                        if (response.length > 0) {
+                            var form = $('<form method="post" id="executeStoredProcedureForm"></form>');
+                            form.append('<div><h3>Enter Parameters</h3></div>');
+
+                            response.forEach(function(param) {
+                                var input = $('<div><label for="' + param.name + '">' + param.name + ' (' + param.type + ')</label><input id="' + param.name + '" name="StoredProcedureParameters[' + param.name + ']" type="text" /></div>');
+                                form.append(input);
+                            });
+
+                            form.append('<button type="submit" asp-page-handler="ExecuteStoredProcedure">Execute Stored Procedure</button>');
+                            parametersContainer.append(form);
+
+                            $('#executeStoredProcedureForm').submit(function(event) {
+                                event.preventDefault();
+                                var spForm = $(this);
+                                var spData = spForm.serialize();
+
+                                $.ajax({
+                                    url: '@Url.Page("/GenerateReport", "ExecuteStoredProcedure")',
+                                    type: 'POST',
+                                    data: spData,
+                                    headers: {
+                                        'RequestVerificationToken': antiForgeryToken
+                                    },
+                                    success: function(response) {
+                                        $('#columnsContainer').html(response);
+                                    },
+                                    error: function(xhr, status, error) {
+                                        console.error('Error executing stored procedure:', error);
+                                    }
+                                });
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching parameters:', error);
+                    }
+                });
+            });
+
+            $('#generateReportForm').submit(function(event) {
+                event.preventDefault();
+                var form = $(this);
+                var data = form.serialize();
+                var antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Page("/GenerateReport", "GenerateReport")',
+                    type: 'POST',
+                    data: data,
+                    headers: {
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    success: function(response) {
+                        var blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        var link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = 'report.xlsx';
+                        link.click();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error generating report:', error);
+                    }
+                });
+            });
+        });
+    </script>
+}
