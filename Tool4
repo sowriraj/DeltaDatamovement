@@ -1,0 +1,107 @@
+@page
+@model GenerateReportModel
+@{
+    ViewData["Title"] = "Generate Report";
+}
+
+<h1>Generate Report</h1>
+
+<form method="post">
+    <div>
+        <label for="SqlScript">Enter SQL Script</label>
+        <textarea id="SqlScript" name="SqlScript" asp-for="SqlScript"></textarea>
+        <span asp-validation-for="SqlScript" class="text-danger"></span>
+    </div>
+    <button type="submit" asp-page-handler="ExecuteScript">Execute Script</button>
+</form>
+
+<h2>Or</h2>
+
+<div>
+    <label for="SelectedStoredProcedure">Select Stored Procedure</label>
+    <select id="SelectedStoredProcedure" name="SelectedStoredProcedure" asp-for="SelectedStoredProcedure" asp-items="@(new SelectList(Model.StoredProcedures))">
+        <option value="">--Select a Stored Procedure--</option>
+    </select>
+</div>
+
+<div id="parametersContainer">
+    @if (Model.ProcedureParameters.Any())
+    {
+        <form method="post">
+            <div>
+                <h3>Enter Parameters</h3>
+                @foreach (var param in Model.ProcedureParameters)
+                {
+                    <div>
+                        <label for="@param.Name">@param.Name (@param.Type)</label>
+                        <input id="@param.Name" name="StoredProcedureParameters[@param.Name]" type="text" />
+                    </div>
+                }
+            </div>
+            <button type="submit" asp-page-handler="ExecuteStoredProcedure">Execute Stored Procedure</button>
+        </form>
+    }
+</div>
+
+@if (Model.Columns.Count > 0)
+{
+    <h3>Select Columns</h3>
+    <form method="post">
+        @foreach (var column in Model.Columns)
+        {
+            <div>
+                <input type="checkbox" name="SelectedColumns" value="@column" /> @column
+            </div>
+        }
+        <button type="submit" asp-page-handler="GenerateReport">Generate Report</button>
+    </form>
+}
+
+<input name="__RequestVerificationToken" type="hidden" value="@Antiforgery.GetTokens(HttpContext).RequestToken" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#SelectedStoredProcedure').change(function() {
+                var selectedStoredProcedure = $(this).val();
+                var antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+                if (selectedStoredProcedure) {
+                    $.ajax({
+                        url: '@Url.Page("/GenerateReport", "GetStoredProcedureParameters")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        data: JSON.stringify(selectedStoredProcedure),
+                        success: function(parameters) {
+                            var parametersContainer = $('#parametersContainer');
+                            parametersContainer.empty();
+
+                            if (parameters.length > 0) {
+                                var form = $('<form method="post"></form>');
+                                form.append('<h3>Enter Parameters</h3>');
+
+                                parameters.forEach(function(param) {
+                                    var parameterDiv = $('<div></div>');
+                                    parameterDiv.append('<label for="' + param.Name + '">' + param.Name + ' (' + param.Type + ')</label>');
+                                    parameterDiv.append('<input id="' + param.Name + '" name="StoredProcedureParameters[' + param.Name + ']" type="text" />');
+                                    form.append(parameterDiv);
+                                });
+
+                                form.append('<input name="__RequestVerificationToken" type="hidden" value="' + antiForgeryToken + '" />');
+                                form.append('<button type="submit" asp-page-handler="ExecuteStoredProcedure">Execute Stored Procedure</button>');
+                                parametersContainer.append(form);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching stored procedure parameters:', error);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}
