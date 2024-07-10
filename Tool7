@@ -1,0 +1,229 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System.Collections.Generic;
+
+public class GenerateReportModel : PageModel
+{
+    private readonly string _connectionString = "YourOracleDatabaseConnectionString";
+
+    [BindProperty]
+    public string SqlScript { get; set; }
+
+    [BindProperty]
+    public List<string> Columns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public List<string> SelectedColumns { get; set; } = new List<string>();
+
+    [BindProperty]
+    public string SelectedStoredProcedure { get; set; }
+
+    [BindProperty]
+    public Dictionary<string, string> StoredProcedureParameters { get; set; } = new Dictionary<string, string>();
+
+    [BindProperty]
+    public List<string> StoredProcedures { get; set; } = new List<string>();
+
+    [BindProperty]
+    public List<ProcedureParameter> ProcedureParameters { get; set; } = new List<ProcedureParameter>();
+
+    public IActionResult OnGet()
+    {
+        LoadStoredProcedures();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostExecuteScriptAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new OracleConnection(_connectionString))
+            {
+                var command = new OracleCommand(SqlScript, connection);
+                var adapter = new OracleDataAdapter(command);
+                await Task.Run(() => adapter.Fill(dataTable));
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing SQL script: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        return Partial("_ColumnsPartial", this);
+    }
+
+    public async Task<IActionResult> OnPostExecuteStoredProcedureAsync()
+    {
+        DataTable dataTable = new DataTable();
+        try
+        {
+            using (var connection = new OracleConnection(_connectionString))
+            {
+                var command = new OracleCommand(SelectedStoredProcedure, connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                foreach (var param in StoredProcedureParameters)
+                {
+                    var parameter = new OracleParameter(param.Key, GetOracleDbType(param.Value))
+                    {
+                        Direction = ParameterDirection.Input,
+                        Value = param.Value
+                    };
+
+                    // Check for ref cursor parameter type
+                    if (param.Key.ToUpper().EndsWith("CURSOR"))
+                    {
+                        parameter.OracleDbType = OracleDbType.RefCursor;
+                        parameter.Direction = ParameterDirection.Output;
+                    }
+                    else
+                    {
+                        parameter.OracleDbType = GetOracleDbType(param.Value);
+                    }
+
+                    command.Parameters.Add(parameter);
+                }
+
+                connection.Open();
+
+                // Execute the command and process ref cursors if any
+                using (var reader = command.ExecuteReader())
+                {
+                    if (command.Parameters.Cast<OracleParameter>().Any(p => p.OracleDbType == OracleDbType.RefCursor))
+                    {
+                        foreach (OracleParameter param in command.Parameters)
+                        {
+                            if (param.OracleDbType == OracleDbType.RefCursor)
+                            {
+                                using (var refCursorReader = ((OracleRefCursor)param.Value).GetDataReader())
+                                {
+                                    dataTable.Load(refCursorReader);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        dataTable.Load(reader);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error executing stored procedure: {ex.Message}");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        foreach (DataColumn column in dataTable.Columns)
+        {
+            Columns.Add(column.ColumnName);
+        }
+
+        HttpContext.Session.Set("QueryResult", dataTable);
+
+        return Partial("_ColumnsPartial", this);
+    }
+
+    public IActionResult OnPostGetStoredProcedureParameters([FromBody] string storedProcedureName)
+    {
+        var procedureParameters = new List<ProcedureParameter>();
+
+        using (var connection = new OracleConnection(_connectionString))
+        {
+            var query = @"SELECT ARGUMENT_NAME, DATA_TYPE
+                          FROM ALL_ARGUMENTS
+                          WHERE OBJECT_NAME = :StoredProcedureName
+                          AND IN_OUT = 'IN'
+                          AND ARGUMENT_NAME IS NOT NULL
+                          ORDER BY POSITION";
+            var command = new OracleCommand(query, connection);
+            command.Parameters.Add(new OracleParameter("StoredProcedureName", storedProcedureName.ToUpper()));
+            connection.Open();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    procedureParameters.Add(new ProcedureParameter
+                    {
+                        Name = reader.GetString(0),
+                        Type = reader.GetString(1)
+                    });
+                }
+            }
+        }
+
+        return new JsonResult(procedureParameters);
+    }
+
+    public IActionResult OnPostGenerateReport()
+    {
+        var dataTable = HttpContext.Session.Get<DataTable>("QueryResult");
+        if (dataTable == null)
+        {
+            ModelState.AddModelError(string.Empty, "No query result found.");
+            LoadStoredProcedures();
+            return Page();
+        }
+
+        using (var stream = new MemoryStream())
+        {
+            using (var document = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook))
+            {
+                var workbookPart = document.AddWorkbookPart();
+                workbookPart.Workbook = new Workbook();
+                var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                worksheetPart.Worksheet = new Worksheet(new SheetData());
+                var sheets = document.WorkbookPart.Workbook.AppendChild(new Sheets());
+                var sheet = new Sheet() { Id = document.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Report" };
+                sheets.Append(sheet);
+
+                var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+
+                var headerRow = new Row();
+                foreach (var column in SelectedColumns)
+                {
+                    headerRow.Append(new Cell() { CellValue = new CellValue(column), DataType = CellValues.String });
+                }
+                sheetData.AppendChild(headerRow);
+
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    var newRow = new Row();
+                    foreach (var column in SelectedColumns)
+                    {
+                        newRow.Append(new Cell() { CellValue = new CellValue(row[column].ToString()), DataType = CellValues.String });
+                    }
+                    sheetData.AppendChild(newRow);
+                }
+
+                workbookPart.Workbook.Save();
+            }
+
+            stream.Position = 0;
+            var fileStream = new MemoryStream(stream.ToArray());
+            return File(fileStream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "report.xlsx");
+        }
+    }
+
+    private void LoadStoredProcedures
