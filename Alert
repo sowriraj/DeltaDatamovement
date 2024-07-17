@@ -1,0 +1,46 @@
+@page
+@model YourNamespace.Pages.YourPageModel
+@{
+    ViewData["Title"] = "Your Page Title";
+}
+
+<!-- Your page content -->
+
+<!-- Alert container -->
+<div id="alertContainer" class="alert alert-danger alert-dismissible fade show" role="alert" style="position: fixed; top: 10px; right: 10px; display: none;">
+    <span id="alertMessage"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
+<!-- Your scripts -->
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function showAlert(message) {
+            $('#alertMessage').text(message);
+            $('#alertContainer').show();
+
+            // Auto-clear after 5 seconds
+            setTimeout(function() {
+                $('#alertContainer').fadeOut('slow');
+            }, 5000);
+        }
+
+        function makeAjaxCall() {
+            $.ajax({
+                url: '/YourRazorPage/YourEndpoint',
+                type: 'POST',
+                data: { /* your data */ },
+                success: function(response) {
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    showAlert('An error occurred: ' + error);
+                }
+            });
+        }
+
+        // Call this function as needed
+        // makeAjaxCall();
+    </script>
+}
