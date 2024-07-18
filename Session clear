@@ -1,0 +1,43 @@
+using System;
+using System.Data;
+using Oracle.ManagedDataAccess.Client;
+
+public class OracleDatabaseHelper
+{
+    private string connectionString;
+
+    public OracleDatabaseHelper(string connectionString)
+    {
+        this.connectionString = connectionString;
+    }
+
+    public void ExecuteQuery(string query)
+    {
+        // Using statements ensure the connection and command are properly disposed of
+        using (OracleConnection connection = new OracleConnection(connectionString))
+        {
+            try
+            {
+                connection.Open();
+                using (OracleCommand command = new OracleCommand(query, connection))
+                {
+                    // Execute your query or command here
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle exception
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                // Ensure the connection is closed
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+            }
+        } // The using statement will automatically call Dispose on connection
+    }
+}
