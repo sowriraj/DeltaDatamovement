@@ -147,3 +147,107 @@ Here’s an example:
     - The `setTimeout` is used to match the Bootstrap fade transition duration, ensuring a smooth effect before removing the element.
 
 This method provides a manual way to handle the alert dismissal, giving you more control over the process.
+
+
+To achieve sending an error message if the AJAX request fails, and sending a partial page if the request is successful, you can modify the AJAX request handling in your frontend JavaScript. Here's how you can implement this:
+
+### Razor Page (Backend)
+
+Ensure your Razor Page handler (`OnPost` method in `YourPage.cshtml.cs`) returns a `PartialViewResult` or an error message as needed. Here's a basic example:
+
+```csharp
+// YourPage.cshtml.cs
+
+public class YourPageModel : PageModel
+{
+    public IActionResult OnPost()
+    {
+        try
+        {
+            // Your logic to handle the POST request
+            // For example, fetching data or processing something
+
+            // Assuming your PartialView is named "_PartialView.cshtml"
+            return Partial("_PartialView", model); // Replace "model" with your actual model object
+        }
+        catch (Exception ex)
+        {
+            // Handle exception and return an error message
+            return BadRequest(new { message = "An error occurred: " + ex.Message });
+        }
+    }
+}
+```
+
+### HTML and JavaScript (Frontend)
+
+Update your frontend to handle both success and error scenarios:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AJAX to Razor Page with Error Handling</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <div id="partialViewContainer"></div>
+  <div id="alertContainer"></div>
+
+  <button id="sendRequestButton" class="btn btn-primary">Send Request</button>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script>
+    $(document).ready(function () {
+      $('#sendRequestButton').on('click', function () {
+        $.ajax({
+          type: 'POST',
+          url: '/YourPage', // Replace with your actual Razor Page URL
+          success: function (partialHtml) {
+            $('#partialViewContainer').html(partialHtml);
+            $('#alertContainer').html(''); // Clear any previous alert
+          },
+          error: function (xhr, status, error) {
+            var errorMessage = xhr.responseJSON ? xhr.responseJSON.message : 'An error occurred: ' + error;
+            showAlert('danger', errorMessage);
+            $('#partialViewContainer').html(''); // Clear partial view container on error
+          }
+        });
+      });
+
+      function showAlert(type, message) {
+        var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">'
+                      + message
+                      + '<button type="button" class="close" data-dismiss="alert" aria-label="Close">'
+                      + '<span aria-hidden="true">&times;</span>'
+                      + '</button>'
+                      + '</div>';
+        $('#alertContainer').html(alertHtml);
+      }
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
+```
+
+### Explanation
+
+1. **Razor Page Backend**:
+   - The `OnPost` method tries to execute the logic and returns a `PartialView` on success or a `BadRequest` with an error message on failure.
+
+2. **Frontend JavaScript**:
+   - The `success` function handles the received `partialHtml` and injects it into `#partialViewContainer`.
+   - The `error` function handles any errors that occur during the AJAX request. It displays an error message using the `showAlert` function and clears the `#partialViewContainer` to ensure no stale data is displayed.
+
+3. **Error Handling**:
+   - The `error` function checks if `xhr.responseJSON` exists (indicating a custom error message from the server) or falls back to a generic error message.
+
+4. **Alert Display**:
+   - The `showAlert` function dynamically creates an alert with Bootstrap classes (`alert`, `alert-dismissible`, `alert-{type}`) and inserts it into `#alertContainer`.
+
+This setup ensures that your application can handle both successful and failed AJAX requests to a Razor Page, displaying appropriate messages or partial views based on the server's response. Adjust the URLs and logic as per your specific application needs.
