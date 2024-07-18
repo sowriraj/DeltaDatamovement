@@ -83,4 +83,67 @@ Here's an example of how you can do this:
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-   
+   If you prefer to handle the dismissal of the alert manually with a click event, you can use JavaScript to remove the alert from the DOM. Here's how you can do it:
+
+1. **Set up your HTML structure without relying on Bootstrap's built-in dismissible alert functionality.**
+2. **Attach a click event to the button to remove the alert manually.**
+
+Here’s an example:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dismissible Alert with JavaScript</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .custom-alert {
+      padding: 0 !important;
+    }
+    .custom-alert .btn-close {
+      font-size: 1rem;
+      padding: 0.2rem 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="customAlert" class="alert alert-warning custom-alert" role="alert">
+    This is a custom alert with modified padding and a styled close button.
+    <button type="button" class="btn btn-warning btn-close" id="closeAlertButton">
+      Close
+    </button>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script>
+    document.getElementById('closeAlertButton').addEventListener('click', function() {
+      var alert = document.getElementById('customAlert');
+      alert.classList.remove('show');
+      alert.classList.add('fade');
+      setTimeout(function() {
+        alert.remove();
+      }, 150); // Match the Bootstrap fade transition duration
+    });
+  </script>
+</body>
+</html>
+```
+
+**Explanation:**
+
+1. **HTML Structure**:
+    - The alert `div` has an `id="customAlert"` for easy access in JavaScript.
+    - The button has an `id="closeAlertButton"` for attaching the click event.
+
+2. **CSS Styles**:
+    - Custom styles to modify padding and button size as needed.
+
+3. **JavaScript**:
+    - Attach a click event listener to the close button.
+    - When the button is clicked, remove the alert smoothly by adding a fade-out effect and then removing the alert from the DOM.
+    - The `setTimeout` is used to match the Bootstrap fade transition duration, ensuring a smooth effect before removing the element.
+
+This method provides a manual way to handle the alert dismissal, giving you more control over the process.
