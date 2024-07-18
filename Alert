@@ -44,3 +44,43 @@
         // makeAjaxCall();
     </script>
 }
+
+To remove the padding from a Bootstrap alert and make the close icon smaller, you can use custom CSS. Here's an example:
+
+1. **Remove Alert Padding:**
+   Add a class to your alert and then use CSS to remove the padding.
+
+2. **Make Close Icon Smaller:**
+   Use CSS to adjust the size of the close icon.
+
+Here's an example of how you can do this:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Bootstrap Alert</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .custom-alert {
+            padding: 0 !important; /* Remove padding */
+        }
+        .custom-alert .close {
+            font-size: 0.75rem; /* Make close icon smaller */
+            line-height: 1.5; /* Adjust line height */
+            padding: 0.25rem 0.5rem; /* Optional: Adjust padding around the close icon */
+        }
+    </style>
+</head>
+<body>
+    <div class="alert alert-warning alert-dismissible fade show custom-alert" role="alert">
+        This is a warning alert with no padding and a smaller close icon.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+   
