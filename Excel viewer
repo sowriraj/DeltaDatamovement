@@ -1,0 +1,221 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+public class IndexModel : PageModel
+{
+    public ExcelDataModel ExcelData { get; set; }
+    public int PageSize { get; set; } = 10;
+    public int CurrentPage { get; set; } = 1;
+    public int TotalPages { get; set; }
+
+    public void OnGet()
+    {
+        ExcelData = new ExcelDataModel();
+    }
+
+    public IActionResult OnPostUpload(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return Page();
+        }
+
+        using (var stream = new MemoryStream())
+        {
+            file.CopyTo(stream);
+            using (SpreadsheetDocument document = SpreadsheetDocument.Open(stream, false))
+            {
+                WorkbookPart workbookPart = document.WorkbookPart;
+                Sheet sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault();
+                WorksheetPart worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                SheetData sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
+
+                var columnNames = new List<string>();
+                var rows = new List<Dictionary<string, string>>();
+
+                var headerRow = sheetData.Elements<Row>().FirstOrDefault();
+                foreach (Cell cell in headerRow.Elements<Cell>())
+                {
+                    columnNames.Add(GetCellValue(document, cell));
+                }
+
+                foreach (Row row in sheetData.Elements<Row>().Skip(1))
+                {
+                    var rowDict = new Dictionary<string, string>();
+                    int colIndex = 0;
+                    foreach (Cell cell in row.Elements<Cell>())
+                    {
+                        rowDict[columnNames[colIndex]] = GetCellValue(document, cell);
+                        colIndex++;
+                    }
+                    rows.Add(rowDict);
+                }
+
+                ExcelData = new ExcelDataModel
+                {
+                    Columns = columnNames,
+                    Rows = rows
+                };
+
+                TotalPages = (int)Math.Ceiling((double)rows.Count / PageSize);
+            }
+        }
+
+        return Page();
+    }
+
+    public IActionResult OnPostQuery(string query)
+    {
+        // Implement query processing using LINQ here
+        return Page();
+    }
+
+    private string GetCellValue(SpreadsheetDocument document, Cell cell)
+    {
+        if (cell == null) return null;
+
+        string value = cell.InnerText;
+        if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+        {
+            return document.WorkbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(int.Parse(value)).InnerText;
+        }
+        return value;
+    }
+}
+
+
+
+
+@page
+@model IndexModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Data Upload and Query</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .autocomplete-suggestions {
+            border: 1px solid #999;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: #fff;
+            z-index: 1000;
+        }
+        .autocomplete-suggestion {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .autocomplete-suggestion:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4">Upload Excel File</h1>
+        <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" class="mb-4">
+            <div class="form-group">
+                <input type="file" name="file" class="form-control-file" />
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+
+        @if (Model.ExcelData != null && Model.ExcelData.Rows != null && Model.ExcelData.Rows.Any())
+        {
+            <h2>Excel Data</h2>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        @foreach (var column in Model.ExcelData.Columns)
+                        {
+                            <th>@column</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.ExcelData.Rows.Skip((Model.CurrentPage - 1) * Model.PageSize).Take(Model.PageSize))
+                    {
+                        <tr>
+                            @foreach (var column in Model.ExcelData.Columns)
+                            {
+                                <td>@row[column]</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <nav>
+                <ul class="pagination">
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
+                            <a class="page-link" href="?currentPage=@i">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+
+            <h2>Query Data</h2>
+            <form method="post" asp-page-handler="Query">
+                <div class="form-group">
+                    <textarea id="query" name="query" class="form-control" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Execute Query</button>
+            </form>
+        }
+
+        <script>
+            $(document).ready(function () {
+                var columnNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExcelData?.Columns ?? new List<string>()));
+
+                $("#query").on('input', function () {
+                    var input = $(this).val().split(/\s+/).pop();
+                    var suggestions = columnNames.filter(function (col) {
+                        return col.toLowerCase().startsWith(input.toLowerCase());
+                    });
+
+                    if (suggestions.length > 0) {
+                        var suggestionBox = $("<div>").addClass("autocomplete-suggestions");
+                        suggestions.forEach(function (suggestion) {
+                            var suggestionItem = $("<div>").addClass("autocomplete-suggestion").text(suggestion);
+                            suggestionBox.append(suggestionItem);
+                        });
+
+                        $(".autocomplete-suggestions").remove();
+                        $(this).after(suggestionBox);
+
+                        $(".autocomplete-suggestion").on('click', function () {
+                            var currentValue = $("#query").val();
+                            var terms = currentValue.split(/\s+/);
+                            terms.pop();
+                            terms.push($(this).text());
+                            $("#query").val(terms.join(" ") + " ");
+                            $(".autocomplete-suggestions").remove();
+                        });
+                    } else {
+                        $(".autocomplete-suggestions").remove();
+                    }
+                });
+
+                $(document).on('click', function (e) {
+                    if (!$(e.target).closest('.autocomplete-suggestions').length && !$(e.target).is("#query")) {
+                        $(".autocomplete-suggestions").remove();
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
