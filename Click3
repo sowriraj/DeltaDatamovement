@@ -1,0 +1,37 @@
+import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
+
+@Component({
+  selector: 'app-dynamic-content',
+  templateUrl: './dynamic-content.component.html',
+  styleUrls: ['./dynamic-content.component.css']
+})
+export class DynamicContentComponent {
+  @ViewChild('container', { static: false }) container!: ElementRef;
+
+  constructor(private renderer: Renderer2) { }
+
+  generateHtml(): void {
+    // Generate dynamic HTML string
+    const htmlString = `
+      <a href="#" id="link1">Dynamic Link 1</a>
+      <a href="#" id="link2">Dynamic Link 2</a>
+    `;
+
+    // Set the innerHTML
+    this.container.nativeElement.innerHTML = htmlString;
+
+    // Bind click events to the dynamically added anchor tags
+    this.bindClickEvents();
+  }
+
+  private bindClickEvents(): void {
+    // Use Renderer2 to safely add event listeners
+    const links = this.container.nativeElement.querySelectorAll('a');
+    links.forEach((link: HTMLAnchorElement) => {
+      this.renderer.listen(link, 'click', (event: MouseEvent) => {
+        console.log('Anchor tag clicked:', event);
+        // Additional logic here
+      });
+    });
+  }
+}
