@@ -1,0 +1,43 @@
+import { Component, OnInit, Renderer2, OnDestroy } from '@angular/core';
+import { FileFetchService } from './file-fetch.service';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent implements OnInit, OnDestroy {
+  private clickListener: () => void;
+
+  constructor(private renderer: Renderer2, private fileFetchService: FileFetchService) { }
+
+  ngOnInit() {
+    this.clickListener = this.renderer.listen('document', 'click', (event) => {
+      const target = event.target as HTMLAnchorElement;
+      if (target.tagName === 'A' && target.href.endsWith('.html')) {
+        event.preventDefault(); // Prevent the default action (navigation)
+        const filename = target.getAttribute('href');
+        this.callServiceMethod(filename);
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    // Clean up the event listener when the component is destroyed
+    if (this.clickListener) {
+      this.clickListener();
+    }
+  }
+
+  callServiceMethod(filename: string) {
+    this.fileFetchService.fetchFile(filename).subscribe(
+      (data) => {
+        console.log('Service response:', data);
+        // Handle the response data as needed
+      },
+      (error) => {
+        console.error('Error calling service:', error);
+      }
+    );
+  }
+}
