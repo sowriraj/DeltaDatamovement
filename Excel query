@@ -1,0 +1,221 @@
+@page
+@model ExcelLinqQueryApp.Pages.UploadModel
+@{
+    ViewData["Title"] = "Upload Excel File";
+}
+
+<h2>Upload Excel File</h2>
+
+<form enctype="multipart/form-data" method="post">
+    <div class="form-group">
+        <label for="file">Choose Excel file</label>
+        <input type="file" class="form-control" id="file" name="file" />
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+@if (Model.SheetNames?.Any() == true)
+{
+    <h3>Select Sheet and Query</h3>
+    <form method="post" asp-page-handler="Query">
+        <div class="form-group">
+            <label for="sheets">Sheets</label>
+            <select id="sheets" name="selectedSheet" class="form-control">
+                @foreach (var sheet in Model.SheetNames)
+                {
+                    <option value="@sheet">@sheet</option>
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="query">LINQ Query</label>
+            <textarea id="query" name="linqQuery" class="form-control"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Run Query</button>
+    </form>
+
+    @if (Model.QueryResult != null)
+    {
+        <h3>Query Results</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    @foreach (var col in Model.QueryResult.Columns)
+                    {
+                        <th>@col</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (System.Data.DataRow row in Model.QueryResult.Rows)
+                {
+                    <tr>
+                        @foreach (var item in row.ItemArray)
+                        {
+                            <td>@item</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var columns = @Html.Raw(Json.Serialize(Model.Columns));
+
+            function showSuggestions(input) {
+                var query = input.value;
+                var matches = columns.filter(function(col) {
+                    return col.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+                });
+                return matches;
+            }
+
+            $('#query').on('input', function() {
+                var suggestions = showSuggestions(this);
+                if (suggestions.length > 0) {
+                    var popoverContent = suggestions.map(function(s) {
+                        return '<div class="suggestion-item">' + s + '</div>';
+                    }).join('');
+                    $(this).popover({
+                        content: popoverContent,
+                        html: true,
+                        placement: 'bottom',
+                        trigger: 'manual'
+                    }).popover('show');
+                } else {
+                    $(this).popover('hide');
+                }
+            });
+
+            $(document).on('click', '.suggestion-item', function() {
+                var text = $(this).text();
+                var queryInput = $('#query');
+                var currentText = queryInput.val();
+                queryInput.val(currentText.substring(0, currentText.lastIndexOf(' ') + 1) + text);
+                queryInput.popover('hide');
+            });
+
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#query').length) {
+                    $('#query').popover('hide');
+                }
+            });
+        });
+    </script>
+}
+
+
+
+
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using Newtonsoft.Json;
+
+namespace ExcelLinqQueryApp.Pages
+{
+    public class UploadModel : PageModel
+    {
+        public List<string> SheetNames { get; set; }
+        public List<string> Columns { get; set; } = new List<string>();
+        [BindProperty]
+        public IFormFile Upload { get; set; }
+        [BindProperty]
+        public string SelectedSheet { get; set; }
+        [BindProperty]
+        public string LinqQuery { get; set; }
+        public DataTable QueryResult { get; set; }
+
+        public void OnPost()
+        {
+            if (Upload != null)
+            {
+                using (var stream = new MemoryStream())
+                {
+                    Upload.CopyTo(stream);
+                    using (var document = SpreadsheetDocument.Open(stream, false))
+                    {
+                        var workbookPart = document.WorkbookPart;
+                        SheetNames = workbookPart.Workbook.Sheets.Elements<Sheet>().Select(s => s.Name.Value).ToList();
+                    }
+                }
+            }
+        }
+
+        public void OnPostQuery()
+        {
+            if (Upload != null)
+            {
+                using (var stream = new MemoryStream())
+                {
+                    Upload.CopyTo(stream);
+                    using (var document = SpreadsheetDocument.Open(stream, false))
+                    {
+                        var workbookPart = document.WorkbookPart;
+                        var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(s => s.Name == SelectedSheet);
+                        if (sheet != null)
+                        {
+                            var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                            var dataTable = new DataTable();
+
+                            var rows = worksheetPart.Worksheet.Descendants<Row>().ToList();
+                            var headerRow = rows[0];
+                            foreach (Cell cell in headerRow)
+                            {
+                                var cellValue = GetCellValue(document, cell);
+                                dataTable.Columns.Add(cellValue);
+                                Columns.Add(cellValue);
+                            }
+
+                            foreach (var row in rows.Skip(1))
+                            {
+                                var dataRow = dataTable.NewRow();
+                                int i = 0;
+                                foreach (Cell cell in row.Descendants<Cell>())
+                                {
+                                    dataRow[i] = GetCellValue(document, cell);
+                                    i++;
+                                }
+                                dataTable.Rows.Add(dataRow);
+                            }
+
+                            // Perform LINQ query
+                            var query = dataTable.AsEnumerable().AsQueryable();
+                            // Note: For simplicity, we assume that the user will write valid LINQ queries directly as C# code.
+                            // This is potentially unsafe and should be done with caution or additional validation.
+                            var result = query.Provider.CreateQuery(System.Linq.Dynamic.Core.DynamicQueryableExtensions.Where(query, LinqQuery));
+                            QueryResult = result.CopyToDataTable();
+                        }
+                    }
+                }
+            }
+        }
+
+        private string GetCellValue(SpreadsheetDocument document, Cell cell)
+        {
+            if (cell == null)
+            {
+                return null;
+            }
+
+            string value = cell.InnerText;
+            if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+            {
+                return document.WorkbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(int.Parse(value)).InnerText;
+            }
+            return value;
+        }
+    }
+}
+
+
+
