@@ -430,3 +430,209 @@ public class UploadModel : PageModel
     </script>
 }
 
+
+
+using System;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+public class UploadModel : PageModel
+{
+    [BindProperty]
+    public IFormFile Upload { get; set; }
+    [BindProperty]
+    public string SelectedSheet { get; set; }
+    [BindProperty]
+    public string SqlQuery { get; set; }
+    public DataTable QueryResult { get; set; }
+    public List<string> SheetNames { get; set; } = new List<string>();
+    public List<string> Columns { get; set; } = new List<string>();
+
+    public async Task<IActionResult> OnPostUploadAsync()
+    {
+        if (Upload != null)
+        {
+            using (var stream = new MemoryStream())
+            {
+                await Upload.CopyToAsync(stream);
+                HttpContext.Session.Set("UploadedFile", stream.ToArray());
+
+                using (var document = SpreadsheetDocument.Open(stream, false))
+                {
+                    var workbookPart = document.WorkbookPart;
+                    SheetNames = workbookPart.Workbook.Sheets.Elements<Sheet>().Select(s => s.Name.ToString()).ToList();
+
+                    if (SheetNames.Any())
+                    {
+                        await LoadSheetColumns(SheetNames.First());
+                    }
+                }
+            }
+        }
+
+        return new JsonResult(new { SheetNames, Columns });
+    }
+
+    public IActionResult OnPostQuery()
+    {
+        var fileBytes = HttpContext.Session.Get("UploadedFile");
+        if (fileBytes != null)
+        {
+            using (var stream = new MemoryStream(fileBytes))
+            {
+                using (var document = SpreadsheetDocument.Open(stream, false))
+                {
+                    var workbookPart = document.WorkbookPart;
+                    var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(s => s.Name == SelectedSheet);
+                    if (sheet != null)
+                    {
+                        var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                        var dataTable = new DataTable();
+
+                        var rows = worksheetPart.Worksheet.Descendants<Row>().ToList();
+                        var headerRow = rows[0];
+                        foreach (Cell cell in headerRow)
+                        {
+                            var cellValue = GetCellValue(workbookPart, cell);
+                            dataTable.Columns.Add(cellValue);
+                        }
+
+                        foreach (var row in rows.Skip(1))
+                        {
+                            var dataRow = dataTable.NewRow();
+                            int i = 0;
+                            foreach (Cell cell in row.Descendants<Cell>())
+                            {
+                                dataRow[i] = GetCellValue(workbookPart, cell);
+                                i++;
+                            }
+                            dataTable.Rows.Add(dataRow);
+                        }
+
+                        var linqQuery = SqlToLinqParser.Parse(SqlQuery);
+                        var query = dataTable.AsEnumerable().AsQueryable();
+                        var result = query.Where(linqQuery.Compile()).AsEnumerable();
+                        QueryResult = result.Any() ? result.CopyToDataTable() : new DataTable();
+                    }
+                }
+            }
+        }
+
+        return new JsonResult(new { QueryResult = DataTableToDictionary(QueryResult) });
+    }
+
+    private async Task LoadSheetColumns(string sheetName)
+    {
+        var fileBytes = HttpContext.Session.Get("UploadedFile");
+        if (fileBytes != null)
+        {
+            using (var stream = new MemoryStream(fileBytes))
+            {
+                using (var document = SpreadsheetDocument.Open(stream, false))
+                {
+                    var workbookPart = document.WorkbookPart;
+                    var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(s => s.Name == sheetName);
+                    if (sheet != null)
+                    {
+                        var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                        var headerRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
+                        if (headerRow != null)
+                        {
+                            Columns = headerRow.Elements<Cell>().Select(c => GetCellValue(workbookPart, c)).ToList();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private string GetCellValue(WorkbookPart workbookPart, Cell cell)
+    {
+        var value = cell.InnerText;
+        if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+        {
+            var stringTable = workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
+            if (stringTable != null)
+            {
+                value = stringTable.SharedStringTable.ElementAt(int.Parse(value)).InnerText;
+            }
+        }
+        return value;
+    }
+
+    private List<Dictionary<string, object>> DataTableToDictionary(DataTable dt)
+    {
+        return dt.AsEnumerable().Select(row => dt.Columns.Cast<DataColumn>()
+            .ToDictionary(col => col.ColumnName, col => row[col])).ToList();
+    }
+}
+
+public static class SqlToLinqParser
+{
+    public static Expression<Func<DataRow, bool>> Parse(string query)
+    {
+        var parameter = Expression.Parameter(typeof(DataRow), "row");
+        var body = ParseExpression(query, parameter);
+        return Expression.Lambda<Func<DataRow, bool>>(body, parameter);
+    }
+
+    private static Expression ParseExpression(string query, ParameterExpression parameter)
+    {
+        // Simplified parser for basic SQL-like conditions. Extend this as needed.
+        var parts = query.Split(new[] { "AND", "OR" }, StringSplitOptions.RemoveEmptyEntries);
+        Expression expression = null;
+        foreach (var part in parts)
+        {
+            var trimmedPart = part.Trim();
+            Expression subExpression = null;
+            if (trimmedPart.Contains(">"))
+            {
+                var operands = trimmedPart.Split('>');
+                var left = Expression.Property(parameter, "Item", Expression.Constant(operands[0].Trim()));
+                var right = Expression.Constant(int.Parse(operands[1].Trim()));
+                subExpression = Expression.GreaterThan(left, right);
+            }
+            else if (trimmedPart.Contains("<"))
+            {
+                var operands = trimmedPart.Split('<');
+                var left = Expression.Property(parameter, "Item", Expression.Constant(operands[0].Trim()));
+                var right = Expression.Constant(int.Parse(operands[1].Trim()));
+                subExpression = Expression.LessThan(left, right);
+            }
+            else if (trimmedPart.Contains("="))
+            {
+                var operands = trimmedPart.Split('=');
+                var left = Expression.Property(parameter, "Item", Expression.Constant(operands[0].Trim()));
+                var right = Expression.Constant(operands[1].Trim());
+                subExpression = Expression.Equal(left, right);
+            }
+            else if (trimmedPart.Contains("LIKE"))
+            {
+                var operands = trimmedPart.Split(new[] { "LIKE" }, StringSplitOptions.None);
+                var left = Expression.Property(parameter, "Item", Expression.Constant(operands[0].Trim()));
+                var right = Expression.Constant(operands[1].Trim().Replace("'", "").Replace("%", ""));
+                subExpression = Expression.Call(left, "Contains", null, right);
+            }
+
+            if (expression == null)
+            {
+                expression = subExpression;
+            }
+            else
+            {
+                expression = Expression.AndAlso(expression, subExpression);
+            }
+        }
+
+        return expression;
+    }
+}
+
