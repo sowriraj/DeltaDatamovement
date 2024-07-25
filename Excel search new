@@ -1,0 +1,432 @@
+using System;
+using System.Data;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text.RegularExpressions;
+
+public static class SqlToLinqParser
+{
+    public static Expression<Func<DataRow, bool>> Parse(string query)
+    {
+        var parameter = Expression.Parameter(typeof(DataRow), "row");
+        var body = ParseConditions(query, parameter);
+        return Expression.Lambda<Func<DataRow, bool>>(body, parameter);
+    }
+
+    private static Expression ParseConditions(string query, ParameterExpression parameter)
+    {
+        var parts = Regex.Split(query, @"\s+(AND|OR)\s+", RegexOptions.IgnoreCase);
+        if (parts.Length == 1)
+        {
+            return ParseCondition(parts[0], parameter);
+        }
+
+        Expression combinedExpression = ParseCondition(parts[0], parameter);
+        for (int i = 1; i < parts.Length; i += 2)
+        {
+            var logicalOperator = parts[i].ToUpper();
+            var nextCondition = ParseCondition(parts[i + 1], parameter);
+            combinedExpression = logicalOperator switch
+            {
+                "AND" => Expression.AndAlso(combinedExpression, nextCondition),
+                "OR" => Expression.OrElse(combinedExpression, nextCondition),
+                _ => throw new NotSupportedException($"Logical operator '{logicalOperator}' is not supported."),
+            };
+        }
+        return combinedExpression;
+    }
+
+    private static Expression ParseCondition(string condition, ParameterExpression parameter)
+    {
+        var parts = Regex.Split(condition.Trim(), @"\s+(==|!=|>|<|>=|<=|LIKE)\s+", RegexOptions.IgnoreCase);
+        if (parts.Length != 3)
+        {
+            throw new ArgumentException("Invalid query format.");
+        }
+
+        var columnName = parts[0];
+        var operation = parts[1].ToUpper();
+        var value = parts[2].Trim('\'');
+
+        Expression left = Expression.Call(
+            typeof(DataRowExtensions),
+            nameof(DataRowExtensions.Field),
+            new Type[] { typeof(object) },
+            parameter,
+            Expression.Constant(columnName));
+
+        Expression right = Expression.Constant(Convert.ChangeType(value, typeof(object)));
+
+        return operation switch
+        {
+            "==" => Expression.Equal(left, right),
+            "!=" => Expression.NotEqual(left, right),
+            ">" => Expression.GreaterThan(left, right),
+            "<" => Expression.LessThan(left, right),
+            ">=" => Expression.GreaterThanOrEqual(left, right),
+            "<=" => Expression.LessThanOrEqual(left, right),
+            "LIKE" => Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) }), right),
+            _ => throw new NotSupportedException($"Operation '{operation}' is not supported."),
+        };
+    }
+}
+
+///
+
+using System;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+public class UploadModel : PageModel
+{
+    [BindProperty]
+    public IFormFile Upload { get; set; }
+    [BindProperty]
+    public string SelectedSheet { get; set; }
+    [BindProperty]
+    public string SqlQuery { get; set; }
+    public DataTable QueryResult { get; set; }
+    public List<string> SheetNames { get; set; }
+    public List<string> Columns { get; set; } = new List<string>();
+
+    public async Task<IActionResult> OnPostUploadAsync()
+    {
+        if (Upload != null)
+        {
+            using (var stream = new MemoryStream())
+            {
+                await Upload.CopyToAsync(stream);
+                using (var document = SpreadsheetDocument.Open(stream, false))
+                {
+                    var workbookPart = document.WorkbookPart;
+                    SheetNames = workbookPart.Workbook.Sheets.Elements<Sheet>().Select(s => s.Name.ToString()).ToList();
+
+                    if (SheetNames.Any())
+                    {
+                        await LoadSheetColumns(SheetNames.First(), stream);
+                    }
+                }
+            }
+        }
+
+        return new JsonResult(new { SheetNames, Columns });
+    }
+
+    public async Task<IActionResult> OnPostQueryAsync()
+    {
+        if (Upload != null)
+        {
+            using (var stream = new MemoryStream())
+            {
+                await Upload.CopyToAsync(stream);
+                using (var document = SpreadsheetDocument.Open(stream, false))
+                {
+                    var workbookPart = document.WorkbookPart;
+                    var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(s => s.Name == SelectedSheet);
+                    if (sheet != null)
+                    {
+                        var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                        var dataTable = new DataTable();
+
+                        var rows = worksheetPart.Worksheet.Descendants<Row>().ToList();
+                        var headerRow = rows[0];
+                        foreach (Cell cell in headerRow)
+                        {
+                            var cellValue = GetCellValue(workbookPart, cell);
+                            dataTable.Columns.Add(cellValue);
+                        }
+
+                        foreach (var row in rows.Skip(1))
+                        {
+                            var dataRow = dataTable.NewRow();
+                            int i = 0;
+                            foreach (Cell cell in row.Descendants<Cell>())
+                            {
+                                dataRow[i] = GetCellValue(workbookPart, cell);
+                                i++;
+                            }
+                            dataTable.Rows.Add(dataRow);
+                        }
+
+                        var linqQuery = SqlToLinqParser.Parse(SqlQuery);
+                        var query = dataTable.AsEnumerable().AsQueryable();
+                        var result = query.Where(linqQuery.Compile()).AsEnumerable();
+                        QueryResult = result.Any() ? result.CopyToDataTable() : new DataTable();
+                    }
+                }
+            }
+        }
+
+        return new JsonResult(new { QueryResult = QueryResult });
+    }
+
+    private string GetCellValue(WorkbookPart workbookPart, Cell cell)
+    {
+        var value = cell.CellValue?.InnerText;
+        if (cell.DataType?.Value == CellValues.SharedString)
+        {
+            return workbookPart.SharedStringTablePart.SharedStringTable.ChildElements[Int32.Parse(value)].InnerText;
+        }
+        return value;
+    }
+
+    private async Task LoadSheetColumns(string sheetName, MemoryStream stream)
+    {
+        using (var document = SpreadsheetDocument.Open(stream, false))
+        {
+            var workbookPart = document.WorkbookPart;
+            var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(s => s.Name == sheetName);
+            if (sheet != null)
+            {
+                var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                var headerRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
+                if (headerRow != null)
+                {
+                    Columns.Clear();
+                    foreach (Cell cell in headerRow)
+                    {
+                        var cellValue = GetCellValue(workbookPart, cell);
+                        Columns.Add(cellValue);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@page
+@model UploadModel
+@{
+    ViewData["Title"] = "Upload Excel File";
+}
+
+<h2>Upload Excel File</h2>
+
+<form id="uploadForm" enctype="multipart/form-data" method="post">
+    <div class="form-group">
+        <label for="file">Choose Excel file</label>
+        <input type="file" class="form-control" id="file" name="Upload" />
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+<div id="sheetSelection" style="display:none;">
+    <h3>Select Sheet and Query</h3>
+    <form id="queryForm" method="post">
+        <div class="form-group">
+            <label for="sheets">Sheets</label>
+            <select id="sheets" name="SelectedSheet" class="form-control"></select>
+        </div>
+        <div class="form-group">
+            <label for="query">SQL-like Query</label>
+            <textarea id="query" name="SqlQuery" class="form-control" placeholder="e.g., Age > 30 AND Name LIKE 'John%'"></textarea>
+            <div id="tooltip" class="tooltip-custom"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Run Query</button>
+    </form>
+
+    <div id="queryResults"></div>
+</div>
+
+@section Styles {
+    <style>
+        .tooltip-custom {
+            position: absolute;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 5px;
+            z-index: 1000;
+            display: none;
+        }
+        .tooltip-custom ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .tooltip-custom li {
+            padding: 3px;
+            cursor: pointer;
+        }
+        .tooltip-custom li:hover {
+            background-color: #eee;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#uploadForm').submit(function(event) {
+                event.preventDefault();
+                var formData = new FormData(this);
+                $.ajax({
+                    url: '@Url.Page("Upload")',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#sheetSelection').show();
+                        $('#sheets').empty();
+                        response.sheetNames.forEach(function(sheetName) {
+                            $('#sheets').append(new Option(sheetName, sheetName));
+                        });
+                        updateColumns(response.columns);
+                    }
+                });
+            });
+
+            $('#sheets').change(function() {
+                updateColumnsForSheet($(this).val());
+            });
+
+            $('#queryForm').submit(function(event) {
+                event.preventDefault();
+                var formData = $(this).serialize();
+                $.ajax({
+                    url: '@Url.Page("Upload", "Query")',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        displayQueryResults(response.queryResult);
+                    }
+                });
+            });
+
+            $('#query').on('input', function() {
+                var query = $(this).val();
+                var cursorPosition = this.selectionStart;
+                var queryPart = query.substring(0, cursorPosition);
+                var lastWord = queryPart.split(/\s+/).pop();
+                showTooltip(lastWord, cursorPosition);
+            });
+
+            $(document).on('click', '.tooltip-custom li', function() {
+                var selectedText = $(this).text();
+                insertAtCursor($('#query')[0], selectedText);
+                $('.tooltip-custom').hide();
+            });
+        });
+
+        function updateColumns(columns) {
+            window.columns = columns;
+        }
+
+        function updateColumnsForSheet(sheetName) {
+            var formData = new FormData();
+            formData.append('Upload', $('#file')[0].files[0]);
+            formData.append('SelectedSheet', sheetName);
+            $.ajax({
+                url: '@Url.Page("Upload", "Upload")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    updateColumns(response.columns);
+                }
+            });
+        }
+
+        function showTooltip(lastWord, cursorPosition) {
+            var matchingColumns = window.columns.filter(function(column) {
+                return column.toLowerCase().startsWith(lastWord.toLowerCase());
+            });
+
+            if (matchingColumns.length > 0) {
+                var textareaOffset = $('#query').offset();
+                var cursorCoordinates = getCursorCoordinates($('#query')[0], cursorPosition);
+                var top = textareaOffset.top + cursorCoordinates.top + 25; // Adjust for tooltip positioning
+                var left = textareaOffset.left + cursorCoordinates.left;
+
+                var tooltipHtml = '<ul>';
+                matchingColumns.forEach(function(column) {
+                    tooltipHtml += '<li>' + column + '</li>';
+                });
+                tooltipHtml += '</ul>';
+
+                $('#tooltip').html(tooltipHtml).css({
+                    top: top + 'px',
+                    left: left + 'px',
+                    display: 'block'
+                });
+            } else {
+                $('#tooltip').hide();
+            }
+        }
+
+        function getCursorCoordinates(textarea, cursorPosition) {
+            var div = document.createElement('div');
+            var style = getComputedStyle(textarea);
+
+            for (var i = 0; i < style.length; i++) {
+                div.style[style[i]] = style[style[i]];
+            }
+
+            div.style.position = 'absolute';
+            div.style.visibility = 'hidden';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.wordWrap = 'break-word';
+
+            document.body.appendChild(div);
+
+            var span = document.createElement('span');
+            div.textContent = textarea.value.substr(0, cursorPosition);
+            span.textContent = textarea.value.substr(cursorPosition);
+
+            div.appendChild(span);
+
+            var coordinates = {
+                top: span.offsetTop + span.offsetHeight,
+                left: span.offsetLeft
+            };
+
+            document.body.removeChild(div);
+
+            return coordinates;
+        }
+
+        function insertAtCursor(textarea, text) {
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+            var value = textarea.value;
+            textarea.value = value.substring(0, start) + text + value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            textarea.focus();
+        }
+
+        function displayQueryResults(queryResult) {
+            var table = '<table class="table table-bordered">';
+            if (queryResult.length > 0) {
+                table += '<thead><tr>';
+                for (var col in queryResult[0]) {
+                    table += '<th>' + col + '</th>';
+                }
+                table += '</tr></thead>';
+                table += '<tbody>';
+                queryResult.forEach(function(row) {
+                    table += '<tr>';
+                    for (var col in row) {
+                        table += '<td>' + row[col] + '</td>';
+                    }
+                    table += '</tr>';
+                });
+                table += '</tbody>';
+            } else {
+                table += '<tr><td colspan="100%">No results found</td></tr>';
+            }
+            table += '</table>';
+            $('#queryResults').html(table);
+        }
+    </script>
+}
+
