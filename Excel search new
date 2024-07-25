@@ -1019,3 +1019,200 @@ public static class SqlToLinqParser
         return expression;
     }
 }
+
+
+@page
+@model UploadModel
+@{
+    ViewData["Title"] = "Upload Excel File";
+}
+
+<h2>Upload Excel File</h2>
+
+<form id="uploadForm" enctype="multipart/form-data" method="post">
+    <div class="form-group">
+        <label for="file">Choose Excel file</label>
+        <input type="file" class="form-control" id="file" name="Upload" />
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+<div id="sheetSelection" style="display:none;">
+    <h3>Select Sheet and Query</h3>
+    <form id="queryForm" method="post">
+        <div class="form-group">
+            <label for="sheets">Sheets</label>
+            <select id="sheets" name="SelectedSheet" class="form-control"></select>
+        </div>
+        <div class="form-group">
+            <label for="query">SQL-like Query</label>
+            <textarea id="query" name="SqlQuery" class="form-control" placeholder="e.g., Age > 30 AND Name LIKE 'John%'"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Run Query</button>
+    </form>
+
+    <div id="queryResults"></div>
+</div>
+
+@section Styles {
+    <style>
+        .tooltip-custom {
+            display: none;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            var columns = [];
+            var currentWord = '';
+
+            $('#uploadForm').on('submit', function (e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                $.ajax({
+                    url: '/Upload?handler=Upload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (data) {
+                        $('#sheetSelection').show();
+                        var sheetSelect = $('#sheets');
+                        sheetSelect.empty();
+                        data.sheetNames.forEach(function (sheetName) {
+                            sheetSelect.append(new Option(sheetName, sheetName));
+                        });
+                        columns = data.columns;
+                    }
+                });
+            });
+
+            $('#sheets').on('change', function () {
+                var selectedSheet = $(this).val();
+                $.ajax({
+                    url: '/Upload?handler=ChangeSheet',
+                    type: 'POST',
+                    data: { sheetName: selectedSheet },
+                    success: function (data) {
+                        columns = data.columns;
+                    }
+                });
+            });
+
+            $('#queryForm').on('submit', function (e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+                $.ajax({
+                    url: '/Upload?handler=Query',
+                    type: 'POST',
+                    data: formData,
+                    success: function (data) {
+                        displayQueryResults(data.queryResult);
+                    }
+                });
+            });
+
+            $('#query').on('input', function (e) {
+                var cursorPosition = this.selectionStart;
+                var queryText = $(this).val();
+                currentWord = getCurrentWord(queryText, cursorPosition);
+                showTooltip(cursorPosition, currentWord);
+            });
+
+            function getCurrentWord(text, position) {
+                var left = text.lastIndexOf(' ', position - 1);
+                var right = text.indexOf(' ', position);
+                if (right == -1) right = text.length;
+                return text.substring(left + 1, right);
+            }
+
+            function showTooltip(cursorPosition, currentWord) {
+                var tooltip = $('#tooltip');
+                var filteredColumns = columns.filter(function (column) {
+                    return column.toLowerCase().includes(currentWord.toLowerCase());
+                });
+
+                if (filteredColumns.length > 0) {
+                    var ul = $('<ul>').addClass('list-group');
+                    filteredColumns.forEach(function (column) {
+                        var li = $('<li>').addClass('list-group-item list-group-item-action').text(column).on('click', function () {
+                            var queryText = $('#query').val();
+                            var left = queryText.lastIndexOf(' ', cursorPosition - 1) + 1;
+                            var right = queryText.indexOf(' ', cursorPosition);
+                            if (right == -1) right = queryText.length;
+                            var newText = queryText.substring(0, left) + column + queryText.substring(right);
+                            $('#query').val(newText);
+                            tooltip.tooltip('hide');
+                        });
+                        ul.append(li);
+                    });
+
+                    tooltip.html(ul);
+
+                    var textarea = $('#query');
+                    var position = getCaretCoordinates(textarea[0], cursorPosition);
+                    tooltip.css({
+                        top: textarea.offset().top + position.top + 20,
+                        left: textarea.offset().left + position.left + 5
+                    }).tooltip({
+                        html: true,
+                        placement: 'bottom',
+                        title: ul,
+                        trigger: 'manual'
+                    }).tooltip('show');
+                } else {
+                    tooltip.tooltip('hide');
+                }
+            }
+
+            function getCaretCoordinates(element, position) {
+                var div = $('<div>').css({
+                    position: 'absolute',
+                    whiteSpace: 'pre-wrap',
+                    visibility: 'hidden'
+                }).text($(element).val().substring(0, position));
+
+                var span = $('<span>').text($(element).val().substring(position) || '.').appendTo(div);
+                $(document.body).append(div);
+
+                var coords = {
+                    top: span.position().top + parseInt($(element).css('font-size')),
+                    left: span.position().left
+                };
+
+                div.remove();
+                return coords;
+            }
+
+            function displayQueryResults(results) {
+                var resultsDiv = $('#queryResults');
+                resultsDiv.empty();
+                if (results.length > 0) {
+                    var table = $('<table>').addClass('table');
+                    var thead = $('<thead>').appendTo(table);
+                    var tbody = $('<tbody>').appendTo(table);
+
+                    var headerRow = $('<tr>').appendTo(thead);
+                    Object.keys(results[0]).forEach(function (key) {
+                        headerRow.append($('<th>').text(key));
+                    });
+
+                    results.forEach(function (row) {
+                        var rowElement = $('<tr>').appendTo(tbody);
+                        Object.values(row).forEach(function (value) {
+                            rowElement.append($('<td>').text(value));
+                        });
+                    });
+
+                    resultsDiv.append(table);
+                } else {
+                    resultsDiv.append($('<p>').text('No results found.'));
+                }
+            }
+        });
+    </script>
+}
