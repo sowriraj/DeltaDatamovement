@@ -1,0 +1,631 @@
+@page
+@model LoanIQ.Report.Utility.Pages.QueryExcelModel
+@{
+    ViewData["Title"] = "Query Excel Sheets";
+}
+@using Newtonsoft.Json;
+<h1>Query Excel</h1> 
+<form method="post" enctype="multipart/form-data" id="uploadForm">
+    <div class="form-group">
+        <label for="uploadedFile">Upload Excel File</label>
+        <input type="file" class="form-control" id="uploadedFile" name="UploadedFile" />
+        <input type="hidden" id="uploadedFileName" name="UploadedFileName" value="@Model.UploadedFileName" />
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+    @if (!string.IsNullOrEmpty(Model.UploadedFileName))
+    {
+        <p id="fileName">File: @Model.UploadedFileName</p>
+    }
+</form>
+
+@if (Model.Sheets.Count > 0)
+{
+    <form id="sheetForm">
+        <div class="form-group">
+            <label for="selectedSheet">Select Sheet</label>
+            <select id="selectedSheet" name="SelectedSheet" class="form-control"  onchange="onSheetChange()">
+                <option value="">---Select---</option>
+                @foreach (var sheet in Model.Sheets)
+                {
+                    <option value="@sheet">@sheet</option>
+                }
+            </select>
+        </div>
+
+       
+        <div class="container mt-5" id="querySection" style="display: none;">
+            
+            <div class="mb-3 position-relative">
+                <textarea class="form-control" id="query" rows="4" placeholder="Type to query..."></textarea>
+                <div id="typeaheadDropdown" class="typeahead-dropdown"></div>
+                <button type="button" class="btn btn-primary" onclick="runQuery()">Run Query</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelQuery()">Cancel</button>
+            </div>
+        </div>
+
+
+    </form>
+
+    <div id="resultsSection" style="display: none;">
+        <table class="table table-striped">
+            <thead>
+                <tr id="tableHeader">
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+        <nav>
+            <ul class="pagination" id="pagination">
+            </ul>
+        </nav>
+    </div>
+
+}
+
+@section Scripts {
+  
+    <script>
+        let currentPage = 1;
+        let totalPages = 0;
+        let columns = [];
+        const $textarea = $('#query');
+        const $typeaheadDropdown = $('#typeaheadDropdown');
+        function onSheetChange() {
+            const sheet = document.getElementById('selectedSheet').value;
+            if (sheet) {
+                fetch(`QueryExcel?handler=GetColumns&sheetName=${sheet}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        columns = [...new Set(data)];
+                        document.getElementById('querySection').style.display = 'block';
+                        document.getElementById('resultsSection').style.display = 'none';
+                    });
+            } else {
+                document.getElementById('querySection').style.display = 'none';
+                document.getElementById('resultsSection').style.display = 'none';
+            }
+        }
+        function runQuery() {
+            const sheet = document.getElementById('selectedSheet').value;
+            const query = document.getElementById('query').value;
+
+            fetch('QueryExcel?handler=RunQuery', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    Sheet: sheet,
+                    Query: query,
+                    Page: currentPage
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    debugger;
+                    if (data && data.data) {
+                        populateTable(data.data);
+                        totalPages = data.totalPages;
+                        currentPage = data.currentPage;
+                        updatePagination();
+                        document.getElementById('resultsSection').style.display = 'block';
+                    } else {
+                        console.error('No data received from the server');
+                    }
+                })
+                .catch(error => console.error('Error running query:', error));
+        }
+
+        function populateTable(data) {
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            if (columns && columns.length > 0) {
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    tableHeader.appendChild(th);
+                });
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    columns.forEach(col => {
+                        const td = document.createElement('td');
+                        td.textContent = row[col];
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+            } else {
+                console.error('No columns available to display');
+            }
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            const createPageItem = (page, text, isActive) => {
+                const li = document.createElement('li');
+                li.classList.add('page-item');
+                if (isActive) {
+                    li.classList.add('active');
+                }
+                li.innerHTML = `<button class="page-link" onclick="gotoPage(${page})">${text}</button>`;
+                return li;
+            };
+
+            const maxPagesToShow = 5;
+            const half = Math.floor(maxPagesToShow / 2);
+            let startPage = Math.max(1, currentPage - half);
+            let endPage = Math.min(totalPages, currentPage + half);
+
+            if (endPage - startPage < maxPagesToShow - 1) {
+                if (startPage === 1) {
+                    endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                } else {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+            }
+
+            if (currentPage > 1) {
+                pagination.appendChild(createPageItem(currentPage - 1, 'Previous', false));
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.appendChild(createPageItem(i, i, i === currentPage));
+            }
+
+            if (currentPage < totalPages) {
+                pagination.appendChild(createPageItem(currentPage + 1, 'Next', false));
+            }
+        }
+
+        function gotoPage(page) {
+            currentPage = page;
+            runQuery();
+        }
+
+        function cancelQuery() {
+            document.getElementById('selectedSheet').value = '';
+            document.getElementById('querySection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        document.getElementById('uploadedFile').addEventListener('change', function () {
+            if (this.files.length > 0) {
+                document.getElementById('uploadedFileName').value = this.files[0].name;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileName = document.getElementById('uploadedFileName').value;
+            if (fileName) {
+                document.getElementById('fileName').innerText = `File: ${fileName}`;
+            }
+        });
+
+        $(document).ready(function () {
+
+            $textarea.on('input', function () {
+                const query = $textarea.val().split(' ').pop().toLowerCase();
+                const matches = columns.filter(col => col.toLowerCase().includes(query));
+                if (matches.length) {
+                    const items = matches.map(item => `<div class="typeahead-item">${item}</div>`).join('');
+                    $typeaheadDropdown.html(items).show();
+
+                    const cursorPos = getCaretCoordinates($textarea[0], $textarea[0].selectionEnd);
+                    $typeaheadDropdown.css({
+                        top: cursorPos.top + 25, // Adjust as needed
+                        left: cursorPos.left + 5, // Adjust as needed
+                        // Use a fixed width instead of the textarea's width
+                    });
+                } else {
+                    $typeaheadDropdown.hide();
+                }
+            });
+
+            $typeaheadDropdown.on('click', '.typeahead-item', function () {
+                const selectedText = $(this).text();
+                const currentValue = $textarea.val();
+                const lastIndex = currentValue.lastIndexOf(' ');
+                if (lastIndex === -1) {
+                    $textarea.val(selectedText + ' ');
+                } else {
+                    $textarea.val(currentValue.substring(0, lastIndex + 1) + selectedText + ' ');
+                }
+                $textarea.focus();
+                $typeaheadDropdown.hide();
+            });
+
+            $(document).on('click', function (event) {
+                if (!$(event.target).closest('#query, #typeaheadDropdown').length) {
+                    $typeaheadDropdown.hide();
+                }
+            });
+
+            function getCaretCoordinates(element, position) {
+                const div = document.createElement('div');
+                const style = getComputedStyle(element);
+                for (let i = 0; i < style.length; i++) {
+                    div.style[style[i]] = style.getPropertyValue(style[i]);
+                }
+                div.style.position = 'absolute';
+                div.style.visibility = 'hidden';
+                div.style.whiteSpace = 'pre-wrap';
+                document.body.appendChild(div);
+                const textNode = document.createTextNode(element.value.substring(0, position));
+                div.appendChild(textNode);
+                const span = document.createElement('span');
+                span.textContent = element.value.substring(position) || '.';
+                div.appendChild(span);
+                const coordinates = {
+                    top: span.offsetTop + element.scrollTop,
+                    left: span.offsetLeft + element.scrollLeft
+                };
+                document.body.removeChild(div);
+                return coordinates;
+            }
+        });
+       
+    </script>
+}
+
+
+
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+
+
+namespace LoanIQ.Report.Utility.Pages
+{
+    public class QueryExcelModel : PageModel
+    {
+        private const string SessionKeyFile = "UploadedFile";
+        public List<string> Sheets { get; set; } = new List<string>();
+        public string UploadedFileName { get; set; }
+        [BindProperty]
+        public IFormFile UploadedFile { get; set; }
+        public List<string> Columns { get; set; } = new List<string>();
+
+        public IActionResult OnPost()
+        {
+            if (UploadedFile != null)
+            {
+                using (var memoryStream = new MemoryStream())
+                {
+                    UploadedFile.CopyTo(memoryStream);
+                    HttpContext.Session.Set(SessionKeyFile, memoryStream.ToArray());
+                    UploadedFileName = UploadedFile.FileName;
+
+                    using (var document = SpreadsheetDocument.Open(new MemoryStream(HttpContext.Session.Get(SessionKeyFile)), false))
+                    {
+                        Sheets.Clear(); // Clear the existing list before adding new sheets.
+                        foreach (var sheet in document.WorkbookPart.Workbook.Sheets.Elements<Sheet>())
+                        {
+                            Sheets.Add(sheet.Name);
+                        }
+                    }
+                }
+            }
+
+            return Page();
+        }
+
+        public IActionResult OnGetGetColumns(string sheetName)
+        {
+            if (!HttpContext.Session.TryGetValue(SessionKeyFile, out var fileData))
+            {
+                return BadRequest("No file uploaded.");
+            }
+
+            using (var document = SpreadsheetDocument.Open(new MemoryStream(fileData), false))
+            {
+                var sheet = document.WorkbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(sh => sh.Name.Value == sheetName);
+                var worksheetPart = (WorksheetPart)document.WorkbookPart.GetPartById(sheet.Id);
+
+                var columns = worksheetPart.Worksheet.Descendants<Row>().First().Elements<Cell>()
+                           .Select(c => GetCellValue(document, c)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+
+                return new JsonResult(columns);
+            }
+        }
+
+        [ValidateAntiForgeryToken]
+        public IActionResult OnPostRunQuery([FromBody] QueryModel queryModel)
+        {
+            if (!HttpContext.Session.TryGetValue(SessionKeyFile, out var fileData))
+            {
+                return BadRequest("No file uploaded.");
+            }
+
+            using (var document = SpreadsheetDocument.Open(new MemoryStream(fileData), false))
+            {
+                var sheet = document.WorkbookPart.Workbook.Sheets.Elements<Sheet>().FirstOrDefault(sh => sh.Name.Value == queryModel.Sheet);
+                var worksheetPart = (WorksheetPart)document.WorkbookPart.GetPartById(sheet.Id);
+
+                var rows = worksheetPart.Worksheet.Descendants<Row>().Skip(1); // Skip header row
+                var columns = worksheetPart.Worksheet.Descendants<Row>().First().Elements<Cell>()
+                        .Select(c => GetCellValue(document, c)).ToList();
+
+                var filteredRows = rows.Select(row => columns.ToDictionary(
+                    col => col,
+                    col => GetCellValue(document, row.Elements<Cell>().ElementAt(columns.IndexOf(col)))
+                ));
+
+                var queryable = filteredRows.AsQueryable();
+                var totalRows = queryable.Count();
+                var result = queryable.Where(queryModel.Query).Skip((queryModel.Page - 1) * 20).Take(20).ToList();
+                var totalPages = (int)Math.Ceiling((double)totalRows / 20);
+
+                var response = new QueryResultModel
+                {
+                    Data = result,
+                    TotalPages = totalPages,
+                    CurrentPage = queryModel.Page
+                };
+
+                return new JsonResult(response);
+            }
+        }
+
+        private bool EvaluateQuery(Dictionary<string, string> row, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return true;
+            }
+
+            var parameter = Expression.Parameter(typeof(Dictionary<string, string>), "row");
+            var expression = BuildExpression(query, parameter);
+            var lambda = Expression.Lambda<Func<Dictionary<string, string>, bool>>(expression, parameter).Compile();
+            return lambda(row);
+        }
+
+        private Expression BuildExpression(string query, ParameterExpression parameter)
+        {
+            var tokens = Tokenize(query);
+            return ParseExpression(tokens, parameter);
+        }
+
+        private List<string> Tokenize(string query)
+        {
+            var tokens = new List<string>();
+            var currentToken = string.Empty;
+            var inString = false;
+
+            for (int i = 0; i < query.Length; i++)
+            {
+                char c = query[i];
+
+                if (c == '"' && (i == 0 || query[i - 1] != '\\'))
+                {
+                    inString = !inString;
+                    currentToken += c;
+                }
+                else if (!inString && (char.IsWhiteSpace(c) || c == '(' || c == ')' || c == ',' || c == '&' || c == '|'))
+                {
+                    if (currentToken.Length > 0)
+                    {
+                        tokens.Add(currentToken);
+                        currentToken = string.Empty;
+                    }
+
+                    if (c == '&' || c == '|')
+                    {
+                        currentToken += c;
+                        if (i + 1 < query.Length && query[i + 1] == c)
+                        {
+                            currentToken += c;
+                            i++;
+                        }
+                        tokens.Add(currentToken);
+                        currentToken = string.Empty;
+                    }
+                    else if (c != ' ')
+                    {
+                        tokens.Add(c.ToString());
+                    }
+                }
+                else
+                {
+                    currentToken += c;
+                }
+            }
+
+            if (currentToken.Length > 0)
+            {
+                tokens.Add(currentToken);
+            }
+
+            return tokens;
+        }
+
+        private Expression ParseExpression(List<string> tokens, ParameterExpression parameter)
+        {
+            if (tokens.Count == 0)
+            {
+                return Expression.Constant(true);
+            }
+
+            var stack = new Stack<Expression>();
+            var operators = new Stack<string>();
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+
+                if (token == "(")
+                {
+                    var subExpressionTokens = new List<string>();
+                    int depth = 1;
+                    i++;
+
+                    while (i < tokens.Count && depth > 0)
+                    {
+                        if (tokens[i] == "(")
+                        {
+                            depth++;
+                        }
+                        else if (tokens[i] == ")")
+                        {
+                            depth--;
+                        }
+
+                        if (depth > 0)
+                        {
+                            subExpressionTokens.Add(tokens[i]);
+                            i++;
+                        }
+                    }
+
+                    var subExpression = ParseExpression(subExpressionTokens, parameter);
+                    stack.Push(subExpression);
+                }
+                else if (IsOperator(token))
+                {
+                    while (operators.Count > 0 && GetPrecedence(operators.Peek()) >= GetPrecedence(token))
+                    {
+                        var right = stack.Pop();
+                        var left = stack.Pop();
+                        var op = operators.Pop();
+                        stack.Push(ApplyOperator(op, left, right));
+                    }
+
+                    operators.Push(token);
+                }
+                else
+                {
+                    stack.Push(ParseCondition(token, tokens, ref i, parameter));
+                }
+            }
+
+            while (operators.Count > 0)
+            {
+                var right = stack.Pop();
+                var left = stack.Pop();
+                var op = operators.Pop();
+                stack.Push(ApplyOperator(op, left, right));
+            }
+
+            return stack.Pop();
+        }
+
+        private Expression ParseCondition(string column, List<string> tokens, ref int index, ParameterExpression parameter)
+        {
+            var operatorStr = tokens[++index];
+            var valueToken = tokens[++index];
+
+            var left = Expression.Property(parameter, "Item", Expression.Constant(column));
+            Expression right = Expression.Constant(valueToken.Trim('"'));
+
+            if (operatorStr == "IN")
+            {
+                var values = new List<Expression>();
+                while (tokens[++index] != ")")
+                {
+                    values.Add(Expression.Constant(tokens[index].Trim('"')));
+                }
+
+                right = Expression.NewArrayInit(typeof(string), values);
+                return Expression.Call(typeof(Enumerable), "Contains", new[] { typeof(string) }, right, left);
+            }
+            else if (operatorStr == "BETWEEN")
+            {
+                var lowerBound = Expression.Constant(tokens[++index].Trim('"'));
+                var upperBound = Expression.Constant(tokens[++index].Trim('"'));
+
+                var lower = Expression.GreaterThanOrEqual(left, lowerBound);
+                var upper = Expression.LessThanOrEqual(left, upperBound);
+
+                return Expression.AndAlso(lower, upper);
+            }
+            else
+            {
+                return operatorStr switch
+                {
+                    "==" => Expression.Equal(left, right),
+                    "!=" => Expression.NotEqual(left, right),
+                    ">" => Expression.GreaterThan(left, right),
+                    ">=" => Expression.GreaterThanOrEqual(left, right),
+                    "<" => Expression.LessThan(left, right),
+                    "<=" => Expression.LessThanOrEqual(left, right),
+                    "like" => Expression.Call(left, "Contains", Type.EmptyTypes, right),
+                    _ => throw new ArgumentException($"Invalid operator {operatorStr}")
+                };
+            }
+        }
+
+        private int GetPrecedence(string operatorStr)
+        {
+            return operatorStr switch
+            {
+                "&&" => 1,
+                "||" => 1,
+                "==" => 2,
+                "!=" => 2,
+                ">" => 2,
+                ">=" => 2,
+                "<" => 2,
+                "<=" => 2,
+                "like" => 2,
+                _ => 0
+            };
+        }
+
+        private Expression ApplyOperator(string op, Expression left, Expression right)
+        {
+            return op switch
+            {
+                "&&" => Expression.AndAlso(left, right),
+                "||" => Expression.OrElse(left, right),
+                _ => throw new ArgumentException($"Invalid operator {op}")
+            };
+        }
+
+        private string GetCellValue(SpreadsheetDocument document, Cell cell)
+        {
+            if (cell.CellValue == null) return string.Empty;
+            var value = cell.CellValue.InnerText;
+            if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+            {
+                return document.WorkbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(int.Parse(value)).InnerText;
+            }
+            return value;
+        }
+
+        private bool IsOperator(string token)
+        {
+            return token == "&&" || token == "||" || token == "==" || token == "!=" || token == ">" || token == ">=" || token == "<" || token == "<=" || token == "like" || token == "IN" || token == "BETWEEN";
+        }
+    }
+
+    public class QueryModel
+    {
+        public string Sheet { get; set; }
+        public string Query { get; set; }
+        public int Page { get; set; }
+    }
+
+    public class QueryResultModel
+    {
+        public List<Dictionary<string, string>> Data { get; set; }
+        public int TotalPages { get; set; }
+        public int CurrentPage { get; set; }
+    }
+}
