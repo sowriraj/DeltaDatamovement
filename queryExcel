@@ -629,3 +629,25 @@ namespace LoanIQ.Report.Utility.Pages
         public int CurrentPage { get; set; }
     }
 }
+
+.typeahead-dropdown {
+    position: absolute;
+    z-index: 1000;
+    display: none;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 0.25rem;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    width: 200px; /* Fixed width */
+}
+
+.typeahead-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+    .typeahead-item:hover {
+        background-color: #e9ecef;
+    }
