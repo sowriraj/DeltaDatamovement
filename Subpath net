@@ -1,0 +1,23 @@
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+    </handlers>
+    <rewrite>
+      <rules>
+        <rule name="Redirect to subpath" stopProcessing="true">
+          <match url="^$" />
+          <action type="Redirect" url="/webapps/reporttool/" />
+        </rule>
+        <rule name="Remove trailing slash" stopProcessing="true">
+          <match url="(.*)/$" />
+          <conditions>
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+          </conditions>
+          <action type="Redirect" redirectType="Permanent" url="{R:1}" />
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
