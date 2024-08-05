@@ -1,0 +1,54 @@
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
+using Microsoft.Extensions.Logging;
+
+public class OracleDataService
+{
+    private readonly string _connectionString;
+    private readonly ILogger<OracleDataService> _logger;
+
+    public OracleDataService(string connectionString, ILogger<OracleDataService> logger)
+    {
+        _connectionString = connectionString;
+        _logger = logger;
+    }
+
+    public async Task<DataSet> GetDataSetAsync(string query)
+    {
+        var dataSet = new DataSet();
+        OracleConnection connection = null;
+
+        try
+        {
+            connection = new OracleConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using (var command = new OracleCommand(query, connection))
+            {
+                using (var adapter = new OracleDataAdapter(command))
+                {
+                    await Task.Run(() => adapter.Fill(dataSet));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while executing the database query.");
+            throw;
+        }
+        finally
+        {
+            if (connection != null)
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    await connection.CloseAsync();
+                }
+                connection.Dispose();
+                _logger.LogInformation("Oracle connection closed and disposed.");
+            }
+        }
+
+        return dataSet;
+    }
+}
