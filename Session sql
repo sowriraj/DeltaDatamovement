@@ -1,0 +1,32 @@
+SELECT
+    r.session_id,
+    r.status,
+    r.start_time,
+    r.command,
+    r.cpu_time,
+    r.total_elapsed_time,
+    r.reads,
+    r.writes,
+    r.logical_reads,
+    r.text_size,
+    r.granted_query_memory,
+    r.percent_complete,
+    s.login_name,
+    s.host_name,
+    s.program_name,
+    s.client_interface_name,
+    s.nt_domain,
+    s.nt_user_name,
+    s.original_login_name,
+    st.text AS sql_text,
+    qp.query_plan
+FROM 
+    sys.dm_exec_requests r
+JOIN 
+    sys.dm_exec_sessions s ON r.session_id = s.session_id
+CROSS APPLY 
+    sys.dm_exec_sql_text(r.sql_handle) AS st
+CROSS APPLY 
+    sys.dm_exec_query_plan(r.plan_handle) AS qp
+ORDER BY 
+    r.total_elapsed_time DESC;
