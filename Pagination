@@ -1,0 +1,100 @@
+<div class="container">
+    <div class="d-flex justify-content-end mb-3">
+        <!-- Column Visibility Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="columnVisibilityDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-filter"></i> Filter Columns
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="columnVisibilityDropdown">
+                @foreach (var column in columns)
+                {
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="toggle-column" data-column="@column.ColumnName" checked> @column.DisplayName
+                        </label>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <!-- Bootstrap Table -->
+    <table class="table table-striped" id="dataTable">
+        <thead>
+            <tr>
+                @foreach (var column in columns)
+                {
+                    <th class="@column.ColumnName">@column.DisplayName</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DataRow row in dataTable.Rows)
+            {
+                <tr>
+                    @foreach (var column in columns)
+                    {
+                        <td class="@column.ColumnName">@row[column.ColumnName]</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- Pagination Controls -->
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item">
+                <a class="page-link" href="#" id="previousPage">Previous</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#" id="nextPage">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@model YourNamespace.YourViewModel
+@{
+    var dataTable = Model.DataTable; // Your DataTable object
+    var columns = Model.Columns; // List of columns
+}
+
+
+$(document).ready(function () {
+    var pageSize = 10;
+    var currentPage = 1;
+    var rows = $('#dataTable tbody tr');
+    var totalRows = rows.length;
+
+    function paginate() {
+        rows.hide();
+        var start = (currentPage - 1) * pageSize;
+        var end = start + pageSize;
+        rows.slice(start, end).show();
+    }
+
+    paginate();
+
+    $('#nextPage').on('click', function (e) {
+        e.preventDefault();
+        if ((currentPage * pageSize) < totalRows) {
+            currentPage++;
+            paginate();
+        }
+    });
+
+    $('#previousPage').on('click', function (e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            paginate();
+        }
+    });
+
+    $('.toggle-column').on('change', function () {
+        var columnClass = $(this).data('column');
+        var isChecked = $(this).is(':checked');
+        $('.' + columnClass).toggle(isChecked);
+    });
+});
