@@ -1,0 +1,117 @@
+<div class="container">
+    <!-- Responsive table wrapper -->
+    <div class="table-responsive">
+        <table class="table table-striped" id="dataTable">
+            <thead>
+                <tr>
+                    <th>Column 1</th>
+                    <th>Column 2</th>
+                    <th>Column 3</th>
+                    <!-- Add more columns as needed -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item">
+                <a class="page-link" href="#" id="previousPage">Previous</a>
+            </li>
+            <span id="pageNumbers"></span>
+            <li class="page-item">
+                <a class="page-link" href="#" id="nextPage">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+
+$(document).ready(function () {
+    var pageSize = 10;
+    var currentPage = 1;
+    var rows = $('#dataTable tbody tr');
+    var totalRows = rows.length;
+    var totalPages = Math.ceil(totalRows / pageSize);
+
+    function showPage(page) {
+        rows.hide();
+        var start = (page - 1) * pageSize;
+        var end = start + pageSize;
+        rows.slice(start, end).show();
+    }
+
+    function updatePagination() {
+        $('#pageNumbers').empty();
+        var startPage = Math.max(1, currentPage - 5);
+        var endPage = Math.min(totalPages, startPage + 9);
+
+        for (var i = startPage; i <= endPage; i++) {
+            $('#pageNumbers').append(
+                `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#">${i}</a>
+                </li>`
+            );
+        }
+    }
+
+    // Initial display
+    showPage(currentPage);
+    updatePagination();
+
+    // Handle next and previous buttons
+    $('#nextPage').on('click', function (e) {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            currentPage++;
+            showPage(currentPage);
+            updatePagination();
+        }
+    });
+
+    $('#previousPage').on('click', function (e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            showPage(currentPage);
+            updatePagination();
+        }
+    });
+
+    // Handle page number click
+    $(document).on('click', '.pagination li a', function (e) {
+        e.preventDefault();
+        var page = parseInt($(this).text());
+        currentPage = page;
+        showPage(currentPage);
+        updatePagination();
+    });
+});
+
+
+<tbody>
+    <tr><td>Row 1 Col 1</td><td>Row 1 Col 2</td><td>Row 1 Col 3</td></tr>
+    <tr><td>Row 2 Col 1</td><td>Row 2 Col 2</td><td>Row 2 Col 3</td></tr>
+    <tr><td>Row 3 Col 1</td><td>Row 3 Col 2</td><td>Row 3 Col 3</td></tr>
+    <!-- Continue adding more rows for testing -->
+</tbody>
+
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pagination .active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item .page-link {
+    color: #007bff;
+}
