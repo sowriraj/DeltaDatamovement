@@ -1,0 +1,194 @@
+@page
+@model IndexModel
+
+@{
+    ViewData["Title"] = "Bootstrap Table with Search, Sort, Pagination, and Dynamic Columns";
+}
+
+<div class="container mt-5">
+    <h2>@ViewData["Title"]</h2>
+
+    <div class="row mb-3">
+        <div class="col-sm-4">
+            <input type="text" class="form-control" placeholder="Search..." id="searchInput" />
+        </div>
+        <div class="col-sm-8 text-end">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnToggleDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Show/Hide Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnToggleDropdown">
+                    @foreach (var column in Model.DynamicColumns)
+                    {
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" checked class="toggle-column" data-column="@column.Key"> @column.Value
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                @foreach (var column in Model.DynamicColumns)
+                {
+                    <th scope="col">
+                        <a href="?sortColumn=@column.Key&sortOrder=@Model.GetSortOrder(column.Key)">
+                            @column.Value @Model.GetSortIcon(column.Key)
+                        </a>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            @foreach (var item in Model.PaginatedList)
+            {
+                <tr>
+                    @foreach (var column in Model.DynamicColumns)
+                    {
+                        <td>@item.GetType().GetProperty(column.Key).GetValue(item, null)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.CurrentPage - 1)">Previous</a>
+            </li>
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
+                    <a class="page-link" href="?page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.CurrentPage + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            searchInput.addEventListener('input', function () {
+                const filter = searchInput.value.toLowerCase();
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].getElementsByTagName('td');
+                    let match = false;
+
+                    for (let j = 0; j < cells.length; j++) {
+                        if (cells[j].textContent.toLowerCase().includes(filter)) {
+                            match = true;
+                            break;
+                        }
+                    }
+
+                    rows[i].style.display = match ? '' : 'none';
+                }
+            });
+
+            document.querySelectorAll('.toggle-column').forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    const column = checkbox.getAttribute('data-column');
+                    const cells = document.querySelectorAll('td:nth-child(' + (parseInt(column) + 1) + '), th:nth-child(' + (parseInt(column) + 1) + ')');
+
+                    cells.forEach(function (cell) {
+                        cell.style.display = checkbox.checked ? '' : 'none';
+                    });
+                });
+            });
+        });
+    </script>
+}
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+public class IndexModel : PageModel
+{
+    public List<Dictionary<string, object>> PaginatedList { get; set; } = new List<Dictionary<string, object>>();
+    public int CurrentPage { get; set; }
+    public int TotalPages { get; set; }
+    public string CurrentSortColumn { get; set; }
+    public bool IsSortDescending { get; set; }
+    public Dictionary<string, string> DynamicColumns { get; set; } = new Dictionary<string, string>();
+
+    public void OnGet(int page = 1, string sortColumn = null, string sortOrder = null)
+    {
+        int pageSize = 10;
+        List<Dictionary<string, object>> allData = GetData();
+
+        // Dynamic Columns
+        if (allData.Any())
+        {
+            DynamicColumns = allData.First().Keys.ToDictionary(k => k, v => v);
+        }
+
+        // Sorting
+        CurrentSortColumn = sortColumn ?? DynamicColumns.Keys.First();
+        IsSortDescending = sortOrder == "desc";
+
+        if (CurrentSortColumn != null && allData.Any())
+        {
+            var columnType = allData.First()[CurrentSortColumn]?.GetType();
+
+            if (IsSortDescending)
+            {
+                allData = allData.OrderByDescending(d => Convert.ChangeType(d[CurrentSortColumn], columnType)).ToList();
+            }
+            else
+            {
+                allData = allData.OrderBy(d => Convert.ChangeType(d[CurrentSortColumn], columnType)).ToList();
+            }
+        }
+
+        // Pagination
+        int totalCount = allData.Count;
+        CurrentPage = page;
+        TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        PaginatedList = allData.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+    }
+
+    public string GetSortOrder(string column)
+    {
+        if (CurrentSortColumn == column && !IsSortDescending)
+            return "desc";
+        return "asc";
+    }
+
+    public string GetSortIcon(string column)
+    {
+        if (CurrentSortColumn == column)
+            return IsSortDescending ? "↓" : "↑";
+        return "";
+    }
+
+    private List<Dictionary<string, object>> GetData()
+    {
+        // Sample dataset, you may replace this with data from your actual source
+        return new List<Dictionary<string, object>>
+        {
+            new Dictionary<string, object> { { "Name", "John Doe" }, { "Age", 28 }, { "Email", "john@example.com" } },
+            new Dictionary<string, object> { { "Name", "Jane Smith" }, { "Age", 34 }, { "Email", "jane@example.com" } },
+            new Dictionary<string, object> { { "Name", "Alice Johnson" }, { "Age", 29 }, { "Email", "alice@example.com" } },
+            // Add more data as needed
+        };
+    }
+}
