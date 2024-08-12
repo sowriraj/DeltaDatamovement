@@ -1,0 +1,214 @@
+@page
+@model YourNamespace.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dynamic Table";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        th.sortable:hover { cursor: pointer; }
+        th.sorted-asc::after { content: "▲"; }
+        th.sorted-desc::after { content: "▼"; }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>@ViewData["Title"]</h2>
+
+    <div class="row mb-3">
+        <div class="col-sm-4">
+            <input type="text" class="form-control" placeholder="Search..." id="searchInput">
+        </div>
+        <div class="col-sm-8 text-end">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnToggleDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Show/Hide Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnToggleDropdown">
+                    @foreach (DataColumn column in Model.Data.Columns)
+                    {
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" checked class="toggle-column" data-column="@column.ColumnName"> @column.ColumnName
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <table id="dataTable" class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                @foreach (DataColumn column in Model.Data.Columns)
+                {
+                    <th class="sortable" data-column="@column.ColumnName">@column.ColumnName</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be dynamically inserted here by JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Pagination Controls -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination" id="pagination">
+            <!-- Pagination links will be dynamically inserted here by JavaScript -->
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const data = @Html.Raw(Json.Serialize(Model.Data)); // Replace with actual data serialization
+            const columns = @Html.Raw(Json.Serialize(Model.ColumnNames));
+            const rowsPerPage = 10;
+            const maxPagesToShow = 6;
+            let currentPage = 1;
+            let sortColumn = columns[0];
+            let sortOrder = 'asc'; // 'asc' or 'desc'
+            let searchTerm = '';
+
+            function renderTable() {
+                // Filter data based on searchTerm
+                let filteredData = data.filter(row =>
+                    columns.some(column => row[column].toLowerCase().includes(searchTerm.toLowerCase()))
+                );
+
+                // Sort filtered data
+                filteredData.sort((a, b) => {
+                    if (sortOrder === 'asc') {
+                        return a[sortColumn] > b[sortColumn] ? 1 : -1;
+                    } else {
+                        return a[sortColumn] < b[sortColumn] ? 1 : -1;
+                    }
+                });
+
+                // Paginate filtered data
+                const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                const start = (currentPage - 1) * rowsPerPage;
+                const paginatedData = filteredData.slice(start, start + rowsPerPage);
+
+                // Render table body
+                const tableBody = document.querySelector('#dataTable tbody');
+                tableBody.innerHTML = paginatedData.map(row => {
+                    return `<tr>
+                        ${columns.map(column => `<td class="column-${column}">${row[column]}</td>`).join('')}
+                    </tr>`;
+                }).join('');
+
+                // Render pagination
+                const pagination = document.querySelector('#pagination');
+                pagination.innerHTML = '';
+
+                if (totalPages > 1) {
+                    if (currentPage > 1) {
+                        pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">&laquo;</a></li>`;
+                    }
+
+                    const startPage = Math.max(1, currentPage - 3);
+                    const endPage = Math.min(totalPages, currentPage + 3);
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        pagination.innerHTML += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>`;
+                    }
+
+                    if (currentPage < totalPages) {
+                        pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">&raquo;</a></li>`;
+                    }
+                }
+            }
+
+            function setupEventListeners() {
+                // Search input event listener
+                document.querySelector('#searchInput').addEventListener('input', function () {
+                    searchTerm = this.value; // Update searchTerm
+                    currentPage = 1; // Reset to first page
+                    renderTable(); // Refresh table
+                });
+
+                // Pagination click event listener
+                document.querySelector('#pagination').addEventListener('click', function (e) {
+                    if (e.target.matches('.page-link')) {
+                        e.preventDefault();
+                        const page = parseInt(e.target.dataset.page, 10);
+                        if (page) {
+                            currentPage = page;
+                            renderTable();
+                        }
+                    }
+                });
+
+                // Table header sorting click event listener
+                document.querySelector('#dataTable').addEventListener('click', function (e) {
+                    if (e.target.matches('th.sortable')) {
+                        sortColumn = e.target.dataset.column;
+                        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                        renderTable();
+                        document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+                        e.target.classList.add(sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    }
+                });
+
+                // Column toggle checkbox event listener
+                document.querySelectorAll('.toggle-column').forEach(checkbox => {
+                    checkbox.addEventListener('change', function () {
+                        const column = this.dataset.column;
+                        const isChecked = this.checked;
+                        document.querySelectorAll(`td.column-${column}, th[data-column="${column}"]`).forEach(cell => cell.style.display = isChecked ? '' : 'none');
+                    });
+                });
+            }
+
+            renderTable();
+            setupEventListeners();
+        });
+    </script>
+}
+</body>
+</html>
+
+
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Data;
+using System.Text.Json;
+
+namespace YourNamespace.Pages
+{
+    public class IndexModel : PageModel
+    {
+        public DataTable Data { get; set; } = new DataTable();
+        public List<string> ColumnNames { get; set; } = new List<string>();
+
+        public void OnGet()
+        {
+            // Example DataTable columns and data
+            Data.Columns.Add("Name", typeof(string));
+            Data.Columns.Add("Age", typeof(int));
+            Data.Columns.Add("Location", typeof(string));
+
+            Data.Rows.Add("Alice", 30, "New York");
+            Data.Rows.Add("Bob", 25, "San Francisco");
+            Data.Rows.Add("Charlie", 35, "Chicago");
+            // Add more data as needed
+
+            // Extract column names
+            foreach (DataColumn column in Data.Columns)
+            {
+                ColumnNames.Add(column.ColumnName);
+            }
+        }
+    }
+}
