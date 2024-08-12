@@ -10,9 +10,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .hidden-column { display: none; }
         th.sortable:hover { cursor: pointer; }
         th.sorted-asc::after { content: "▲"; }
         th.sorted-desc::after { content: "▼"; }
@@ -94,7 +93,7 @@
                     return Array.from(cells).some(cell => cell.textContent.toLowerCase().includes(searchInput.value.toLowerCase()));
                 });
 
-                if (sortColumn) {
+                if (sortColumn !== null) {
                     filteredRows.sort((rowA, rowB) => {
                         const cellA = rowA.querySelector(`td:nth-child(${sortColumn})`).textContent;
                         const cellB = rowB.querySelector(`td:nth-child(${sortColumn})`).textContent;
