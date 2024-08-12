@@ -1,0 +1,228 @@
+@page
+@model YourNamespace.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dynamic Table";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        th.sortable:hover { cursor: pointer; }
+        th.sorted-asc::after { content: "▲"; }
+        th.sorted-desc::after { content: "▼"; }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>@ViewData["Title"]</h2>
+
+    <div class="row mb-3">
+        <div class="col-sm-4">
+            <input type="text" class="form-control" placeholder="Search..." id="searchInput">
+        </div>
+        <div class="col-sm-8 text-end">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnToggleDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Show/Hide Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnToggleDropdown">
+                    @foreach (var column in Model.Columns)
+                    {
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" checked class="toggle-column" data-column="@column"> @column
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                @foreach (var column in Model.Columns)
+                {
+                    <th class="sortable" data-column="@column">@column</th>
+                }
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            @foreach (DataRow row in Model.TableData.Rows)
+            {
+                <tr>
+                    @foreach (var column in Model.Columns)
+                    {
+                        <td>@row[column]</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- Pagination Controls -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination" id="pagination">
+            <!-- Pagination links will be generated here -->
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const rowsPerPage = 10;
+            const maxPagesToShow = 6;
+            const tableBody = document.getElementById('tableBody');
+            const pagination = document.getElementById('pagination');
+            const searchInput = document.getElementById('searchInput');
+            const headers = document.querySelectorAll('th.sortable');
+            let currentPage = 1;
+            let sortColumn = null;
+            let sortOrder = 'asc'; // 'asc' or 'desc'
+
+            function renderTable() {
+                const rows = Array.from(tableBody.getElementsByTagName('tr'));
+                const searchTerm = searchInput.value.toLowerCase();
+
+                const filteredRows = rows.filter(row => {
+                    const cells = row.getElementsByTagName('td');
+                    return Array.from(cells).some(cell => cell.textContent.toLowerCase().includes(searchTerm));
+                });
+
+                if (sortColumn !== null) {
+                    filteredRows.sort((rowA, rowB) => {
+                        const cellA = rowA.querySelector(`td:nth-child(${sortColumn})`).textContent;
+                        const cellB = rowB.querySelector(`td:nth-child(${sortColumn})`).textContent;
+                        const valueA = isNaN(cellA) ? cellA.toLowerCase() : parseFloat(cellA);
+                        const valueB = isNaN(cellB) ? cellB.toLowerCase() : parseFloat(cellB);
+
+                        return sortOrder === 'asc' ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
+                    });
+                }
+
+                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                currentPage = Math.min(currentPage, totalPages); // Ensure currentPage does not exceed totalPages
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const paginatedRows = filteredRows.slice(startIndex, endIndex);
+
+                // Clear table body and render paginated rows
+                tableBody.innerHTML = '';
+                paginatedRows.forEach(row => tableBody.appendChild(row));
+
+                // Render pagination
+                pagination.innerHTML = '';
+                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                if (currentPage > 1) {
+                    const prev = document.createElement('li');
+                    prev.className = 'page-item';
+                    prev.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+                    prev.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            renderTable();
+                        }
+                    });
+                    pagination.appendChild(prev);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item';
+                    if (i === currentPage) li.classList.add('active');
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    li.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage = i;
+                        renderTable();
+                    });
+                    pagination.appendChild(li);
+                }
+
+                if (currentPage < totalPages) {
+                    const next = document.createElement('li');
+                    next.className = 'page-item';
+                    next.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+                    next.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            renderTable();
+                        }
+                    });
+                    pagination.appendChild(next);
+                }
+            }
+
+            searchInput.addEventListener('input', () => {
+                currentPage = 1;
+                renderTable();
+            });
+
+            // Column visibility toggle
+            document.querySelectorAll('.toggle-column').forEach(checkbox => {
+                checkbox.addEventListener('change', function () {
+                    const columnName = checkbox.getAttribute('data-column');
+                    const headers = document.querySelectorAll('th');
+                    let columnIndex = -1;
+
+                    headers.forEach((header, index) => {
+                        if (header.textContent.trim() === columnName) {
+                            columnIndex = index + 1;
+                        }
+                    });
+
+                    if (columnIndex > 0) {
+                        const cells = document.querySelectorAll(`td:nth-child(${columnIndex}), th:nth-child(${columnIndex})`);
+                        cells.forEach(cell => cell.style.display = checkbox.checked ? '' : 'none');
+                    }
+
+                    // Re-render table after toggling column visibility
+                    renderTable();
+                });
+            });
+
+            // Sort columns
+            headers.forEach((header, index) => {
+                header.addEventListener('click', () => {
+                    const columnIndex = index + 1;
+
+                    if (sortColumn === columnIndex) {
+                        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortColumn = columnIndex;
+                        sortOrder = 'asc';
+                    }
+
+                    headers.forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+                    if (sortColumn) {
+                        header.classList.add(sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    }
+
+                    renderTable();
+                });
+            });
+
+            // Initial render
+            renderTable();
+        });
+    </script>
+}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
