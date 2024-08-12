@@ -1,0 +1,190 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+
+public class IndexModel : PageModel
+{
+    public DataTable PaginatedTable { get; set; }
+    public int CurrentPage { get; set; }
+    public int TotalPages { get; set; }
+    public string CurrentSortColumn { get; set; }
+    public bool IsSortDescending { get; set; }
+    public List<string> Columns { get; set; } = new List<string>();
+
+    public void OnGet(int page = 1, string sortColumn = null, string sortOrder = null)
+    {
+        int pageSize = 10;
+
+        // Populate Columns list from your DataTable's columns
+        DataTable allData = GetData(); // Your method to retrieve the DataTable
+        Columns = allData.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+
+        // Sorting
+        CurrentSortColumn = sortColumn ?? Columns.First();
+        IsSortDescending = sortOrder == "desc";
+
+        if (!string.IsNullOrEmpty(CurrentSortColumn) && allData.Columns.Contains(CurrentSortColumn))
+        {
+            allData.DefaultView.Sort = $"{CurrentSortColumn} {(IsSortDescending ? "DESC" : "ASC")}";
+            allData = allData.DefaultView.ToTable();
+        }
+
+        // Pagination
+        int totalCount = allData.Rows.Count;
+        CurrentPage = page;
+        TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        PaginatedTable = allData.AsEnumerable().Skip((page - 1) * pageSize).Take(pageSize).CopyToDataTable();
+    }
+
+    public string GetSortOrder(string column)
+    {
+        if (CurrentSortColumn == column && !IsSortDescending)
+            return "desc";
+        return "asc";
+    }
+
+    public string GetSortIcon(string column)
+    {
+        if (CurrentSortColumn == column)
+            return IsSortDescending ? "↓" : "↑";
+        return "";
+    }
+
+    private DataTable GetData()
+    {
+        // Your logic to retrieve the DataTable
+        DataTable table = new DataTable();
+        table.Columns.Add("Name", typeof(string));
+        table.Columns.Add("Age", typeof(int));
+        table.Columns.Add("Email", typeof(string));
+
+        table.Rows.Add("John Doe", 28, "john@example.com");
+        table.Rows.Add("Jane Smith", 34, "jane@example.com");
+        table.Rows.Add("Alice Johnson", 29, "alice@example.com");
+
+        // Add more rows as needed...
+
+        return table;
+    }
+}
+
+
+@page
+@model IndexModel
+
+@{
+    ViewData["Title"] = "Bootstrap Table with Search, Sort, Pagination, and Dynamic Columns";
+}
+
+<div class="container mt-5">
+    <h2>@ViewData["Title"]</h2>
+
+    <div class="row mb-3">
+        <div class="col-sm-4">
+            <input type="text" class="form-control" placeholder="Search..." id="searchInput" />
+        </div>
+        <div class="col-sm-8 text-end">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnToggleDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Show/Hide Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnToggleDropdown">
+                    @foreach (var column in Model.Columns)
+                    {
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" checked class="toggle-column" data-column="@column"> @column
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                @foreach (var column in Model.Columns)
+                {
+                    <th scope="col">
+                        <a href="?sortColumn=@column&sortOrder=@Model.GetSortOrder(column)">
+                            @column @Model.GetSortIcon(column)
+                        </a>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            @foreach (DataRow row in Model.PaginatedTable.Rows)
+            {
+                <tr>
+                    @foreach (var column in Model.Columns)
+                    {
+                        <td>@row[column]</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.CurrentPage - 1)">Previous</a>
+            </li>
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
+                    <a class="page-link" href="?page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.CurrentPage + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            searchInput.addEventListener('input', function () {
+                const filter = searchInput.value.toLowerCase();
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].getElementsByTagName('td');
+                    let match = false;
+
+                    for (let j = 0; j < cells.length; j++) {
+                        if (cells[j].textContent.toLowerCase().includes(filter)) {
+                            match = true;
+                            break;
+                        }
+                    }
+
+                    rows[i].style.display = match ? '' : 'none';
+                }
+            });
+
+            document.querySelectorAll('.toggle-column').forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    const columnIndex = Array.from(checkbox.closest('tr').children).findIndex(th => th.textContent.trim() === checkbox.getAttribute('data-column')) + 1;
+                    const cells = document.querySelectorAll('td:nth-child(' + columnIndex + '), th:nth-child(' + columnIndex + ')');
+
+                    cells.forEach(function (cell) {
+                        cell.style.display = checkbox.checked ? '' : 'none';
+                    });
+                });
+            });
+        });
+    </script>
+}
+
