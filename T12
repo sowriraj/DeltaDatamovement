@@ -1,0 +1,53 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    const tableBody = document.getElementById('tableBody');
+
+    if (searchInput && tableBody) {
+        const rows = tableBody.getElementsByTagName('tr');
+
+        // Search functionality
+        searchInput.addEventListener('input', function () {
+            const filter = searchInput.value.toLowerCase();
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let match = false;
+
+                for (let j = 0; j < cells.length; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(filter)) {
+                        match = true;
+                        break;
+                    }
+                }
+
+                rows[i].style.display = match ? '' : 'none';
+            }
+        });
+
+        // Hide/Show Columns
+        document.querySelectorAll('.toggle-column').forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                const columnName = checkbox.getAttribute('data-column');
+                const headers = document.querySelectorAll('th');
+                let columnIndex = -1;
+
+                // Find the correct column index based on the header text
+                headers.forEach((header, index) => {
+                    if (header.textContent.trim() === columnName) {
+                        columnIndex = index + 1; // Adjust for nth-child selector (1-based index)
+                    }
+                });
+
+                if (columnIndex > 0) {
+                    const cells = document.querySelectorAll(`td:nth-child(${columnIndex}), th:nth-child(${columnIndex})`);
+
+                    cells.forEach(function (cell) {
+                        cell.style.display = checkbox.checked ? '' : 'none';
+                    });
+                }
+            });
+        });
+    }
+});
+
+
