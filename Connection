@@ -1,0 +1,9 @@
+"User Id=myUsername;Password=myPassword;Data Source=myDataSource;
+Connection Timeout=30; // Sets the wait time for establishing a connection
+Max Pool Size=100; // Maximum number of connections allowed in the pool
+Min Pool Size=10; // Minimum number of connections maintained in the pool
+Connection Lifetime=120; // The maximum lifetime (in seconds) of a connection before it is destroyed and replaced in the pool
+Incr Pool Size=5; // Number of connections to be added when the pool is exhausted
+Decr Pool Size=2; // Number of connections to be released when the pool has extra connections
+Validate Connection=True; // Ensures that connections are still valid when retrieved from the pool
+Pooling=True;"
