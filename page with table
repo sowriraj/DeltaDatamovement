@@ -1,0 +1,169 @@
+<!-- _DetailPartialView.cshtml -->
+@model YourNamespace.Pages.IndexModel
+
+<!-- Column filter options -->
+<div class="mb-3">
+    <label for="columnFilter" class="form-label">Show/Hide Columns:</label>
+    <select id="columnFilter" class="form-select" multiple>
+        @foreach (var column in Model.ColumnList)
+        {
+            <option value="@column" selected>@column</option>
+        }
+    </select>
+</div>
+
+<!-- Search box -->
+<input type="text" id="searchBox" class="form-control mb-3" placeholder="Search...">
+
+<!-- Table container -->
+<table id="dataTable" class="table table-bordered">
+    <thead>
+        <tr>
+            @foreach (var column in Model.ColumnList)
+            {
+                <th class="sortable" data-column="@column">@column <span class="sort-icon"></span></th>
+            }
+        </tr>
+    </thead>
+    <tbody id="dataBody">
+        @foreach (var row in Model.DataList)
+        {
+            <tr>
+                @foreach (var column in Model.ColumnList)
+                {
+                    <td>@row[column]</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Pagination controls -->
+<nav>
+    <ul class="pagination justify-content-center" id="pagination"></ul>
+</nav>
+
+<!-- Script section for functionality -->
+<script>
+    $(document).ready(function () {
+        initializeTable();
+
+        // Custom search functionality
+        $('#searchBox').on('keyup', function () {
+            var searchTerm = this.value.toLowerCase();
+            $('#dataTable tbody tr').each(function () {
+                var rowText = $(this).text().toLowerCase();
+                $(this).toggle(rowText.indexOf(searchTerm) > -1);
+            });
+        });
+
+        // Column show/hide functionality
+        $('#columnFilter').on('change', function () {
+            var selectedColumns = $(this).val();
+            $('#dataTable th, #dataTable td').each(function () {
+                var columnName = $(this).data('column');
+                if (columnName) {
+                    var shouldShow = selectedColumns.includes(columnName);
+                    $(this).toggle(shouldShow);
+                }
+            });
+        });
+    });
+
+    function initializeTable() {
+        var currentPage = 1;
+        var rowsPerPage = 10;
+
+        // Sorting functionality
+        $('#dataTable th.sortable').on('click', function () {
+            var column = $(this).data('column');
+            var order = $(this).data('order');
+            order = order === 'asc' ? 'desc' : 'asc';
+            $(this).data('order', order);
+            sortTable(column, order);
+        });
+
+        // Pagination functionality
+        function paginateTable() {
+            var totalRows = $('#dataTable tbody tr').length;
+            var totalPages = Math.ceil(totalRows / rowsPerPage);
+
+            $('#pagination').empty();
+
+            for (var i = 1; i <= totalPages; i++) {
+                $('#pagination').append(`<li class="page-item"><a class="page-link" href="#">${i}</a></li>`);
+            }
+
+            showPage(1);
+
+            $('#pagination li').on('click', function () {
+                var page = $(this).text();
+                currentPage = parseInt(page);
+                showPage(currentPage);
+            });
+        }
+
+        function showPage(page) {
+            var start = (page - 1) * rowsPerPage;
+            var end = start + rowsPerPage;
+            $('#dataTable tbody tr').hide().slice(start, end).show();
+        }
+
+        function sortTable(column, order) {
+            var rows = $('#dataTable tbody tr').get();
+            rows.sort(function (a, b) {
+                var A = $(a).children('td').eq($('#dataTable th[data-column="' + column + '"]').index()).text().toUpperCase();
+                var B = $(b).children('td').eq($('#dataTable th[data-column="' + column + '"]').index()).text().toUpperCase();
+
+                if (A < B) {
+                    return order === 'asc' ? -1 : 1;
+                }
+                if (A > B) {
+                    return order === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+            $.each(rows, function (index, row) {
+                $('#dataTable tbody').append(row);
+            });
+            showPage(currentPage);
+        }
+
+        // Initialize the pagination and sorting
+        paginateTable();
+    }
+</script>
+
+
+
+
+<!-- Index.cshtml -->
+@page
+@model YourNamespace.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container">
+    <h1>Welcome to the Main Page</h1>
+
+    <!-- Table container -->
+    <div id="partialViewContainer">
+        <!-- The partial view will be loaded here -->
+    </div>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        // Load the partial view into the container
+        $("#partialViewContainer").load("/Index/LoadPartialView");
+    });
+</script>
