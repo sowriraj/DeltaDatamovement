@@ -1,0 +1,77 @@
+  $(document).ready(function () {
+            const data = @Html.Raw(JsonSerializer.Serialize(Model.DataList));
+            const columns = @Html.Raw(JsonSerializer.Serialize(Model.ColumnNames));
+            const rowsPerPage = 10;
+            let currentPage = 1;
+            let sortColumn = columns[0];
+            let sortOrder = 'asc';
+            let searchTerm = '';
+
+            function renderTable() {
+                let filteredData = data.filter(row =>
+                    columns.some(column => row[column]?.toString().toLowerCase().includes(searchTerm.toLowerCase()))
+                );
+
+                filteredData.sort((a, b) => {
+                    return sortOrder === 'asc' ? a[sortColumn].localeCompare(b[sortColumn]) : b[sortColumn].localeCompare(a[sortColumn]);
+                });
+
+                const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                const start = (currentPage - 1) * rowsPerPage;
+                const paginatedData = filteredData.slice(start, start + rowsPerPage);
+
+                const tableBody = $('#dataTable tbody');
+                tableBody.html(paginatedData.map(row => {
+                    return `<tr>${columns.map(column => `<td class="column-${column}">${row[column]}</td>`).join('')}</tr>`;
+                }).join(''));
+
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                if (totalPages > 1) {
+                    if (currentPage > 1) {
+                        pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">&laquo;</a></li>`);
+                    }
+
+                    for (let i = 1; i <= totalPages; i++) {
+                        pagination.append(`<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`);
+                    }
+
+                    if (currentPage < totalPages) {
+                        pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">&raquo;</a></li>`);
+                    }
+                }
+            }
+
+            // Event delegation for search input
+            $(document).on('input', '#searchInput', function () {
+                searchTerm = $(this).val();
+                currentPage = 1;
+                renderTable();
+            });
+
+            // Event delegation for pagination clicks
+            $(document).on('click', '#pagination .page-link', function (e) {
+                e.preventDefault();
+                currentPage = parseInt($(this).data('page'), 10);
+                renderTable();
+            });
+
+            // Event delegation for table header sorting
+            $(document).on('click', '#dataTable th.sortable', function () {
+                sortColumn = $(this).data('column');
+                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                renderTable();
+                $('#dataTable th.sortable').removeClass('sorted-asc sorted-desc');
+                $(this).addClass(sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            });
+
+            // Event delegation for column toggle checkboxes
+            $(document).on('change', '.toggle-column', function () {
+                const column = $(this).data('column');
+                $(`td.column-${column}, th[data-column="${column}"]`).toggle($(this).is(':checked'));
+            });
+
+            renderTable(); // Initial rendering
+        });
+    </script>
