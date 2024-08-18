@@ -1,0 +1,244 @@
+@model LoanIQ.Report.Utility.Pages.PrivacyModel
+
+<table class="table table-striped table-responsive" id="dataTable">
+    <thead>
+        <tr>
+            @foreach (var column in Model.ColumnList)
+            {
+                <th data-column="@column" class="sortable" data-sort-order="asc">
+                    @column
+                    <i class="bi sort-icon"></i> <!-- Bootstrap 5 sort icon -->
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.DataList != null && Model.DataList.Any())
+        {
+            foreach (var row in Model.DataList)
+            {
+                <tr>
+                    @foreach (var column in Model.ColumnList)
+                    {
+                        <td data-column="@column">@row[column]</td>
+                    }
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="@Model.ColumnList.Count">No data available</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<nav>
+    <ul class="pagination justify-content-center" id="pagination">
+        <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+            <a class="page-link" href="#" data-page="@(Model.PageNumber - 1)">Previous</a>
+        </li>
+        @for (var i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.PageNumber + 2, (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)); i++)
+        {
+            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                <a class="page-link" href="#" data-page="@i">@i</a>
+            </li>
+        }
+        <li class="page-item @(Model.PageNumber == (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize) ? "disabled" : "")">
+            <a class="page-link" href="#" data-page="@(Model.PageNumber + 1)">Next</a>
+        </li>
+    </ul>
+</nav>
+
+
+
+@page
+@model  LoanIQ.Report.Utility.Pages.PrivacyModel
+@{
+    ViewData["Title"] = "Privacy";
+}
+
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <input type="text" id="searchBox" class="form-control" placeholder="Search...">
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Columns
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnFilterDropdown">
+                    @foreach (var column in Model.ColumnList)
+                    {
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="column-checkbox" value="@column" checked>
+                                @column
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="partialViewContainer">
+        <!-- Partial view will be loaded here -->
+        @await Html.PartialAsync("_DetailPartialView", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Variables to track sorting state
+            let currentSortColumn = '';
+            let currentSortOrder = 'asc';
+
+            loadPartialView(1);
+
+            // Search functionality
+            $('#searchBox').on('input', function () {
+                loadPartialView(1);
+            });
+
+            // Column filtering
+            $('.column-checkbox').on('change', function () {
+                var column = $(this).val();
+                var isChecked = $(this).is(':checked');
+                toggleColumn(column, isChecked);
+            });
+
+            function loadPartialView(pageNumber) {
+                var searchTerm = $('#searchBox').val();
+                $.get('@Url.Page("/Privacy", "LoadPartialView")', {
+                    pageNumber: pageNumber,
+                    searchTerm: searchTerm,
+                    sortColumn: currentSortColumn,
+                    sortOrder: currentSortOrder
+                }, function (data) {
+                    $('#partialViewContainer').html(data);
+                    // Reapply sorting state after loading new data
+                    applySortingState();
+                });
+            }
+
+            function toggleColumn(column, isChecked) {
+                if (isChecked) {
+                    $('td[data-column="' + column + '"], th[data-column="' + column + '"]').show();
+                } else {
+                    $('td[data-column="' + column + '"], th[data-column="' + column + '"]').hide();
+                }
+            }
+
+            function applySortingState() {
+                if (currentSortColumn) {
+                    const sortIcon = currentSortOrder === 'asc' ? 'bi-sort-up' : 'bi-sort-down';
+                    $('[data-column="' + currentSortColumn + '"]').attr('data-sort-order', currentSortOrder);
+                    $('[data-column="' + currentSortColumn + '"] .sort-icon').addClass(sortIcon);
+                }
+            }
+
+            $(document).on('click', '.sortable', function () {
+                var sortColumn = $(this).data('column');
+                currentSortOrder = $(this).data('sort-order') === 'asc' ? 'desc' : 'asc';
+
+                currentSortColumn = sortColumn;
+                loadPartialView(1);
+            });
+
+            $(document).on('click', '.pagination .page-link', function (e) {
+                e.preventDefault();
+                var pageNumber = $(this).data('page');
+                loadPartialView(pageNumber);
+            });
+        });
+    </script>
+}
+
+
+
+
+
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LoanIQ.Report.Utility.Pages
+{
+    public class PrivacyModel : PageModel
+    {
+        [BindProperty]
+        public List<string> ColumnList { get; set; }
+
+        [BindProperty]
+        public List<Dictionary<string, string>> DataList { get; set; }
+
+        [BindProperty]
+        public int TotalCount { get; set; }
+
+        [BindProperty]
+        public int PageNumber { get; set; } = 1;
+
+        [BindProperty]
+        public int PageSize { get; set; } = 10;
+
+        public void OnGet()
+        {
+            // Initialize columns and data for the initial load
+            ColumnList = new List<string> { "ID", "Name", "Age", "Location" };
+            DataList = GenerateData();
+
+            // Apply pagination for initial load
+            DataList = DataList.Take(PageSize).ToList();
+            TotalCount = DataList.Count;
+        }
+
+        public IActionResult OnGetLoadPartialView(int pageNumber = 1, int pageSize = 10, string searchTerm = "", string sortColumn = "", string sortOrder = "asc")
+        {
+            ColumnList = new List<string> { "ID", "Name", "Age", "Location" };
+            var allData = GenerateData();
+
+            // Filtering
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                allData = allData.Where(row => row.Values.Any(value => value.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))).ToList();
+            }
+
+            // Sorting
+            if (!string.IsNullOrEmpty(sortColumn))
+            {
+                allData = sortOrder == "asc" ?
+                          allData.OrderBy(row => row[sortColumn]).ToList() :
+                          allData.OrderByDescending(row => row[sortColumn]).ToList();
+            }
+
+            // Pagination
+            DataList = allData.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            TotalCount = allData.Count;
+            PageNumber = pageNumber;
+            PageSize = pageSize;
+
+            return Partial("_DetailPartialView", this);
+        }
+
+        private List<Dictionary<string, string>> GenerateData()
+        {
+            var data = new List<Dictionary<string, string>>();
+            for (int i = 1; i <= 100; i++)
+            {
+                data.Add(new Dictionary<string, string>
+                {
+                    { "ID", i.ToString() },
+                    { "Name", $"Name {i}" },
+                    { "Age", (20 + i % 50).ToString() },
+                    { "Location", $"Location {i % 10}" }
+                });
+            }
+            return data;
+        }
+    }
+}
+
+
