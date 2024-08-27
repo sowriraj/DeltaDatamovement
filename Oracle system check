@@ -1,0 +1,41 @@
+using System;
+using System.Runtime.InteropServices;
+
+namespace OracleBitnessUtility
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string bitness = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
+
+            Console.WriteLine($"This machine's operating system is {bitness}.");
+            
+            // Check whether the application is running in 32-bit or 64-bit mode
+            string processBitness = Environment.Is64BitProcess ? "64-bit" : "32-bit";
+            Console.WriteLine($"This application is running in {processBitness} mode.");
+
+            // Check Oracle client bitness
+            try
+            {
+                Type oracleClientType = Type.GetType("Oracle.DataAccess.Client.OracleConnection, Oracle.DataAccess", throwOnError: false);
+                if (oracleClientType != null)
+                {
+                    Console.WriteLine("Oracle Data Access Client (ODP.NET) detected.");
+                    Console.WriteLine($"Oracle Data Access Client is {bitness}.");
+                }
+                else
+                {
+                    Console.WriteLine("Oracle Data Access Client (ODP.NET) is not installed.");
+                }
+            }
+            catch (BadImageFormatException)
+            {
+                Console.WriteLine("Oracle Data Access Client is installed, but it's not compatible with the current application bitness.");
+            }
+
+            Console.WriteLine("\nPress any key to exit.");
+            Console.ReadKey();
+        }
+    }
+}
