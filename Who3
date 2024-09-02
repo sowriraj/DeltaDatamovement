@@ -1,0 +1,52 @@
+-- Filter by database name
+EXEC sp_FilteredWho3 @DBName = 'YourDatabaseName';
+
+-- Filter by status
+EXEC sp_FilteredWho3 @Status = 'running';
+
+-- Filter by host name
+EXEC sp_FilteredWho3 @HostName = 'YourHostName';
+
+-- Filter by all criteria
+EXEC sp_FilteredWho3 @DBName = 'YourDatabaseName', @Status = 'running', @HostName = 'YourHostName';
+
+
+
+CREATE PROCEDURE sp_FilteredWho3
+    @DBName NVARCHAR(128) = NULL,  -- Optional: Filter by database name
+    @Status NVARCHAR(50) = NULL,   -- Optional: Filter by status (e.g., 'running', 'sleeping')
+    @HostName NVARCHAR(128) = NULL -- Optional: Filter by host name
+AS
+BEGIN
+    -- Declare a temporary table to store the results from sp_who3
+    CREATE TABLE #Who3Results (
+        SPID INT,
+        Status NVARCHAR(50),
+        Login NVARCHAR(128),
+        HostName NVARCHAR(128),
+        BlkBy NVARCHAR(5),
+        DBName NVARCHAR(128),
+        Command NVARCHAR(16),
+        CPUTime INT,
+        DiskIO INT,
+        LastBatch NVARCHAR(50),
+        ProgramName NVARCHAR(128),
+        SPID2 INT,
+        RequestID INT
+    );
+
+    -- Insert the result set from sp_who3 into the temporary table
+    INSERT INTO #Who3Results
+    EXEC sp_who3;
+
+    -- Apply filters based on provided parameters
+    SELECT *
+    FROM #Who3Results
+    WHERE
+        (@DBName IS NULL OR DBName = @DBName) AND
+        (@Status IS NULL OR Status = @Status) AND
+        (@HostName IS NULL OR HostName = @HostName);
+
+    -- Clean up the temporary table
+    DROP TABLE #Who3Results;
+END
