@@ -1,0 +1,82 @@
+@page
+@model YourNamespace.YourPageModel
+@{
+    ViewData["Title"] = "Date Range and Customer ID Form";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">Customer Search</h2>
+    <form id="searchForm">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="startDate" name="StartDate" required>
+            </div>
+            <div class="col-md-4">
+                <label for="endDate" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="endDate" name="EndDate" required>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="customerId" class="form-label">Customer ID</label>
+                <input type="text" class="form-control" id="customerId" name="CustomerId" required>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="searchBtn">Search</button>
+    </form>
+
+    <div id="result"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#searchBtn').click(function () {
+            $.ajax({
+                type: "POST",
+                url: "/YourPage/OnPostSearch", // Adjust URL according to your PageModel handler
+                data: {
+                    StartDate: $('#startDate').val(),
+                    EndDate: $('#endDate').val(),
+                    CustomerId: $('#customerId').val()
+                },
+                success: function (response) {
+                    $('#result').html(response); // Display the result in the 'result' div
+                },
+                error: function () {
+                    $('#result').html('<div class="alert alert-danger">Error processing request.</div>');
+                }
+            });
+        });
+    });
+</script>
+
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace YourNamespace
+{
+    public class YourPageModel : PageModel
+    {
+        [BindProperty]
+        public DateTime StartDate { get; set; }
+
+        [BindProperty]
+        public DateTime EndDate { get; set; }
+
+        [BindProperty]
+        public string CustomerId { get; set; }
+
+        public IActionResult OnPostSearch()
+        {
+            // Your logic here, e.g., querying the database
+            string result = $"Start Date: {StartDate}, End Date: {EndDate}, Customer ID: {CustomerId}";
+            
+            return Content(result); // Return the result as plain text for now
+        }
+    }
+}
