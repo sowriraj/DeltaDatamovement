@@ -1,0 +1,33 @@
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#submitButton').click(function (e) {
+            e.preventDefault();
+
+            var startDate = $('#startDate').val();
+            var endDate = $('#endDate').val();
+            var customerId = $('#customerId').val();
+
+            console.log("Start Date:", startDate);
+            console.log("End Date:", endDate);
+            console.log("Customer ID:", customerId);
+
+            $.ajax({
+                url: '@Url.Page("/YourPageName")',
+                type: 'POST',
+                data: {
+                    StartDate: startDate,
+                    EndDate: endDate,
+                    CustomerId: customerId
+                },
+                success: function (response) {
+                    console.log("Success Response:", response);
+                    $('#result').html('<div class="alert alert-success">Success: ' + response.message + '</div>');
+                },
+                error: function (xhr, status, error) {
+                    console.log("Error Response:", error);
+                    $('#result').html('<div class="alert alert-danger">Error: ' + error + '</div>');
+                }
+            });
+        });
+    });
+</script>
