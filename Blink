@@ -1,0 +1,41 @@
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="YourNamespace.Default" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blinking Link</title>
+    <style>
+        /* CSS for the blinking effect */
+        .blink {
+            animation: blink-animation 1s steps(2, start) infinite;
+            color: red; /* Optional: change the color of the blinking text */
+        }
+
+        @keyframes blink-animation {
+            0% {
+                visibility: visible;
+            }
+            50% {
+                visibility: hidden;
+            }
+            100% {
+                visibility: visible;
+            }
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <div>
+            <p>Important Update! We’ve launched a new and improved portal for a smoother experience. 
+                Please use the new portal for all future access. 
+                <asp:HyperLink ID="HyperLink1" runat="server" NavigateUrl="~/NewPortal.aspx">
+                    <span class="blink">Click here to explore!</span>
+                </asp:HyperLink>
+            </p>
+        </div>
+    </form>
+</body>
+</html>
