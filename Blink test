@@ -1,0 +1,58 @@
+To create the "Click here to explore" as a link in an ASP.NET Web Forms application, you can use the HyperLink control. Here's how you can integrate it into the message:
+
+Example:
+
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="YourNamespace.Default" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moving Text Banner</title>
+    <style>
+        .moving-text {
+            white-space: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .moving-text p {
+            display: inline-block;
+            padding-left: 100%;
+            animation: move-text 15s linear infinite;
+        }
+
+        @keyframes move-text {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <div class="moving-text">
+            <p>Important Update! We’ve launched a new and improved portal for a smoother experience. 
+                Please use the new portal for all future access. 
+                <asp:HyperLink ID="HyperLink1" runat="server" NavigateUrl="~/NewPortal.aspx">Click here to explore!</asp:HyperLink>
+            </p>
+        </div>
+    </form>
+</body>
+</html>
+
+Key Points:
+
+The <asp:HyperLink> control is used to create the link in Web Forms.
+
+The NavigateUrl property points to the new page (NewPortal.aspx in this example). You can change this to the URL of your new portal.
+
+The rest of the code ensures the text is moving, as discussed previously.
+
+
+Let me know if you need any further adjustments!
+
