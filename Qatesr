@@ -1,0 +1,99 @@
+Here’s the separate acceptance criteria for QA testing and performance testing, along with the modules that need to be tested:
+
+QA Testing Acceptance Criteria
+
+Scenario: Validating the quality and functionality of the new internal website.
+
+Modules to be Tested:
+
+User Authentication (Login/Logout)
+
+Dashboard
+
+User Profile Management
+
+Notifications and Alerts
+
+Data Input Forms
+
+Reporting and Analytics
+
+
+
+Case 1: Testing core functionality.
+
+Given that the QA team has access to the latest build of the website,
+
+When each module (e.g., authentication, profile management) is tested for proper functionality,
+
+Then the modules should behave as expected with no critical bugs or errors.
+
+
+Case 2: Validating cross-browser compatibility.
+
+Given that the website supports multiple browsers (e.g., Chrome, Firefox, Edge),
+
+When the website is tested across different browsers and devices,
+
+Then it should function consistently and display correctly in all supported environments.
+
+
+Case 3: Ensuring proper error handling.
+
+Given that the QA team simulates various input errors and system failures,
+
+When these scenarios are tested,
+
+Then the system should handle them gracefully by displaying appropriate error messages without crashing.
+
+
+
+---
+
+Performance Testing Acceptance Criteria
+
+Scenario: Ensuring the website can handle expected user load and performs well under stress.
+
+Modules to be Tested:
+
+Homepage Loading
+
+Search Functionality
+
+Data Reports (Generating and Exporting)
+
+User Profile Update
+
+High-traffic pages (e.g., Dashboard, Notifications)
+
+
+
+Case 1: Testing website response time.
+
+Given that performance testing tools are set up,
+
+When the response time is measured under normal user load,
+
+Then all critical pages should load within 3 seconds under normal conditions.
+
+
+Case 2: Stress testing under peak traffic.
+
+Given that stress testing scenarios are defined to simulate peak user traffic,
+
+When the website is tested under high load (e.g., 500 concurrent users),
+
+Then the system should remain stable without crashing or significant performance degradation.
+
+
+Case 3: Resource utilization (CPU, Memory).
+
+Given that resource usage is monitored during performance testing,
+
+When the site operates under varying loads,
+
+Then CPU and memory usage should remain within acceptable limits, and the website should not cause server overload.
+
+
+These criteria ensure both functional correctness (QA) and the system’s ability to handle real-world demands (performance).
+
