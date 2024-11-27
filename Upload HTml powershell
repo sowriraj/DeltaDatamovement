@@ -1,0 +1,51 @@
+# Import Oracle Managed Data Access Library
+Add-Type -Path "path\to\Oracle.ManagedDataAccess.dll"
+
+# Define database connection details
+$oracleConnectionString = "User Id=your_username;Password=your_password;Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=your_host)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=your_service_name)));"
+
+# Define the folder containing the files
+$folderPath = "C:\path\to\your\folder"
+
+# Function to insert data into the Oracle table
+function Insert-FileToOracle {
+    param (
+        [string]$connectionString,
+        [string]$filePath,
+        [System.Data.OracleClient.OracleConnection]$connection
+    )
+    try {
+        # Read the file content
+        $fileContent = Get-Content -Path $filePath -Raw
+
+        # Prepare the SQL Insert Command
+        $sql = "INSERT INTO HtmlDataTable (HtmlContent) VALUES (:htmlContent)"
+        $command = $connection.CreateCommand()
+        $command.CommandText = $sql
+
+        # Add HTML content as a parameter
+        $parameter = $command.Parameters.Add("htmlContent", [Oracle.ManagedDataAccess.Client.OracleDbType]::Clob)
+        $parameter.Value = $fileContent
+
+        # Execute the command
+        $command.ExecuteNonQuery()
+        Write-Host "Inserted file: $filePath"
+    } catch {
+        Write-Host "An error occurred while inserting file $filePath: $_"
+    }
+}
+
+# Create a new Oracle connection outside the loop
+$connection = New-Object Oracle.ManagedDataAccess.Client.OracleConnection($oracleConnectionString)
+$connection.Open()
+
+# Iterate through all files in the folder
+Get-ChildItem -Path $folderPath -File | ForEach-Object {
+    # Call the function to insert each file
+    Insert-FileToOracle -connectionString $oracleConnectionString -filePath $_.FullName -connection $connection
+}
+
+# Close the connection after processing all files
+$connection.Close()
+
+Write-Host "All files have been processed."
