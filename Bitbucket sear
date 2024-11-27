@@ -1,0 +1,125 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        string bitbucketBaseUrl = "https://api.bitbucket.org/2.0";
+        string token = "YOUR_BITBUCKET_TOKEN"; // Replace with your Bitbucket token
+        string keyword = "YOUR_KEYWORD";       // Replace with the search keyword
+        string workspace = "YOUR_WORKSPACE";   // Replace with your Bitbucket workspace
+
+        List<SearchResult> results = new List<SearchResult>();
+        HttpClient client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Get repositories
+        string repoUrl = $"{bitbucketBaseUrl}/repositories/{workspace}";
+        Console.WriteLine("Fetching repositories...");
+        var reposResponse = await client.GetStringAsync(repoUrl);
+        var repos = JsonDocument.Parse(reposResponse).RootElement.GetProperty("values");
+
+        foreach (var repo in repos.EnumerateArray())
+        {
+            string repoSlug = repo.GetProperty("slug").GetString();
+            Console.WriteLine($"Searching in repository: {repoSlug}");
+
+            // Search for the keyword in the repository
+            string searchUrl = $"{bitbucketBaseUrl}/repositories/{workspace}/{repoSlug}/search/code?q={Uri.EscapeDataString(keyword)}";
+            var searchResponse = await client.GetStringAsync(searchUrl);
+            var searchResults = JsonDocument.Parse(searchResponse).RootElement.GetProperty("values");
+
+            foreach (var result in searchResults.EnumerateArray())
+            {
+                results.Add(new SearchResult
+                {
+                    Repository = repoSlug,
+                    FilePath = result.GetProperty("path").GetString(),
+                    Line = result.GetProperty("line").GetInt32(),
+                    CodeSnippet = result.GetProperty("content").GetString()
+                });
+            }
+        }
+
+        // Export to Excel
+        Console.WriteLine("Exporting results to Excel...");
+        ExportToExcel(results, "SearchResults.xlsx");
+        Console.WriteLine("Export completed!");
+    }
+
+    static void ExportToExcel(List<SearchResult> results, string filePath)
+    {
+        using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
+        {
+            // Create the workbook
+            WorkbookPart workbookPart = document.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
+
+            // Create the worksheet
+            WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+            worksheetPart.Worksheet = new Worksheet(new SheetData());
+
+            // Create sheet data
+            SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+
+            // Add header row
+            Row headerRow = new Row();
+            headerRow.Append(
+                CreateCell("Repository"),
+                CreateCell("File Path"),
+                CreateCell("Line"),
+                CreateCell("Code Snippet")
+            );
+            sheetData.Append(headerRow);
+
+            // Add data rows
+            foreach (var result in results)
+            {
+                Row dataRow = new Row();
+                dataRow.Append(
+                    CreateCell(result.Repository),
+                    CreateCell(result.FilePath),
+                    CreateCell(result.Line.ToString()),
+                    CreateCell(result.CodeSnippet)
+                );
+                sheetData.Append(dataRow);
+            }
+
+            // Link worksheet to workbook
+            Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
+            Sheet sheet = new Sheet
+            {
+                Id = document.WorkbookPart.GetIdOfPart(worksheetPart),
+                SheetId = 1,
+                Name = "SearchResults"
+            };
+            sheets.Append(sheet);
+            workbookPart.Workbook.Save();
+        }
+    }
+
+    static Cell CreateCell(string value)
+    {
+        return new Cell
+        {
+            CellValue = new CellValue(value),
+            DataType = CellValues.String
+        };
+    }
+}
+
+class SearchResult
+{
+    public string Repository { get; set; }
+    public string FilePath { get; set; }
+    public int Line { get; set; }
+    public string CodeSnippet { get; set; }
+}
