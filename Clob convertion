@@ -1,0 +1,64 @@
+using System;
+using System.Data;
+using Oracle.ManagedDataAccess.Client;
+
+class Program
+{
+    static void Main()
+    {
+        string connectionString = "User Id=<username>;Password=<password>;Data Source=<datasource>";
+
+        using (var connection = new OracleConnection(connectionString))
+        {
+            try
+            {
+                connection.Open();
+
+                string query = "SELECT my_clob_column FROM my_table WHERE condition = :value";
+
+                using (var command = new OracleCommand(query, connection))
+                {
+                    // Add parameter if needed
+                    command.Parameters.Add(":value", OracleDbType.Varchar2).Value = "some_value";
+
+                    using (var adapter = new OracleDataAdapter(command))
+                    {
+                        DataSet dataSet = new DataSet();
+                        adapter.Fill(dataSet);
+
+                        // Process the DataSet
+                        if (dataSet.Tables.Count > 0)
+                        {
+                            foreach (DataRow row in dataSet.Tables[0].Rows)
+                            {
+                                string clobData = ConvertClobToString(row["my_clob_column"]);
+                                Console.WriteLine(clobData);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+            }
+        }
+    }
+
+    static string ConvertClobToString(object clobObject)
+    {
+        if (clobObject == DBNull.Value || clobObject == null)
+            return null;
+
+        // Convert the CLOB to string
+        if (clobObject is Oracle.ManagedDataAccess.Types.OracleClob clob)
+        {
+            using (clob)
+            {
+                return clob.Value; // Reads the CLOB content
+            }
+        }
+
+        return clobObject.ToString();
+    }
+}
