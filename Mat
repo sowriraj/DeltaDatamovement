@@ -1,0 +1,18 @@
+@use '@angular/material' as mat;
+
+@include mat.core(); // Initialize core styles
+
+// Define primary and accent palettes
+$primary-palette: mat.$indigo-palette;
+$accent-palette: mat.$pink-palette;
+
+// Define a theme
+$theme: mat.define-light-theme((
+  color: (
+    primary: mat.define-palette($primary-palette),
+    accent: mat.define-palette($accent-palette),
+  ),
+));
+
+// Apply the theme to all components
+@include mat.all-component-themes($theme);
