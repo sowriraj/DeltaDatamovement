@@ -1,0 +1,68 @@
+npm install xlsx file-saver
+
+<mat-table [dataSource]="dataSource" matSort>
+  <!-- Column Definitions -->
+  <ng-container matColumnDef="name">
+    <mat-header-cell *matHeaderCellDef mat-sort-header>Name</mat-header-cell>
+    <mat-cell *matCellDef="let element">{{ element.name }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="age">
+    <mat-header-cell *matHeaderCellDef mat-sort-header>Age</mat-header-cell>
+    <mat-cell *matCellDef="let element">{{ element.age }}</mat-cell>
+  </ng-container>
+
+  <!-- Header and Rows -->
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+</mat-table>
+
+<button mat-raised-button (click)="exportToExcel()">Export to Excel</button>
+<button mat-raised-button (click)="exportToCSV()">Export to CSV</button>
+
+import { Component } from '@angular/core';
+import { MatTableDataSource } from '@angular/material/table';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
+@Component({
+  selector: 'app-material-table-exporter',
+  templateUrl: './material-table-exporter.component.html',
+  styleUrls: ['./material-table-exporter.component.css']
+})
+export class MaterialTableExporterComponent {
+  displayedColumns: string[] = ['name', 'age'];
+  dataSource = new MatTableDataSource([
+    { name: 'John Doe', age: 28 },
+    { name: 'Jane Smith', age: 34 },
+    { name: 'Sam Wilson', age: 23 }
+  ]);
+
+  // Export to Excel
+  exportToExcel(): void {
+    const dataToExport = this.dataSource.filteredData.map((row: any) => ({
+      Name: row.name,
+      Age: row.age
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+
+    XLSX.writeFile(workbook, 'TableData.xlsx');
+  }
+
+  // Export to CSV
+  exportToCSV(): void {
+    const dataToExport = this.dataSource.filteredData.map((row: any) => ({
+      Name: row.name,
+      Age: row.age
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const csvData = XLSX.utils.sheet_to_csv(worksheet);
+
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, 'TableData.csv');
+  }
+}
