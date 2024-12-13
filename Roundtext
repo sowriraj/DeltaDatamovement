@@ -1,0 +1,16 @@
+/* Customize the form field */
+.custom-search-box .mat-mdc-form-field-outline {
+  border-radius: 15px; /* Rounded corners */
+  border-color: white; /* Optional: White border */
+}
+
+/* Style the input text */
+.custom-search-box .mdc-text-field__input {
+  color: white; /* Input text color */
+}
+
+/* Adjust the prefix icon color */
+.custom-search-box .mat-mdc-form-field-prefix .mat-icon {
+  color: white; /* Search icon color */
+  margin-right: 8px; /* Space between icon and text */
+}
