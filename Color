@@ -54,3 +54,31 @@ $custom-theme: mat.define-light-theme((
     background-color: #011e5f !important;
   }
 }
+
+
+/* styles.scss */
+
+/* Define a custom primary color */
+:root {
+  --mat-primary-color: #1976d2;  /* Custom primary color */
+}
+
+/* Apply the primary color where color="primary" is used */
+.mat-mdc-button[color="primary"], 
+.mat-mdc-raised-button[color="primary"],
+.mat-mdc-flat-button[color="primary"],
+.mat-mdc-stroked-button[color="primary"],
+.mat-mdc-checkbox[color="primary"],
+.mat-mdc-radio[color="primary"],
+.mat-mdc-switch[color="primary"] {
+  background-color: var(--mat-primary-color) !important;
+  color: white !important;
+}
+
+/* Remove the button radius globally for all buttons */
+.mat-mdc-button, 
+.mat-mdc-raised-button, 
+.mat-mdc-flat-button, 
+.mat-mdc-stroked-button {
+  border-radius: 0 !important; /* Remove border radius */
+}
