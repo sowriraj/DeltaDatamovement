@@ -1,0 +1,34 @@
+/* styles.scss */
+
+/* Define a custom primary color */
+:root {
+  --mat-primary-color: #1976d2;  /* Blue color */
+  --mat-accent-color: #ff4081;   /* Pink color */
+  --mat-warn-color: #f44336;     /* Red color */
+}
+
+/* Apply primary color to various Angular Material components */
+.mat-mdc-button, .mat-mdc-raised-button, .mat-mdc-flat-button, .mat-mdc-stroked-button {
+  background-color: var(--mat-primary-color) !important;
+  color: white !important;
+}
+
+.mat-mdc-checkbox .mdc-checkbox__background {
+  background-color: var(--mat-primary-color) !important;
+}
+
+.mat-mdc-radio .mdc-radio__background {
+  background-color: var(--mat-primary-color) !important;
+}
+
+.mat-mdc-form-field {
+  border-color: var(--mat-primary-color) !important;
+}
+
+.mat-mdc-slider .mdc-slider__track {
+  background-color: var(--mat-primary-color) !important;
+}
+
+.mat-mdc-select {
+  border-color: var(--mat-primary-color) !important;
+}
