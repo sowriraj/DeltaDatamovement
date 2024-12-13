@@ -1,0 +1,56 @@
+@use '@angular/material' as mat;
+
+// Define a custom primary palette with #012169 as the main color
+$custom-primary-palette: mat.define-palette((
+  50: #e3e7f7,
+  100: #bac2ec,
+  200: #8c99e0,
+  300: #586bd3,
+  400: #2f48c6,
+  500: #012169, // Custom color
+  600: #011e5f,
+  700: #011a53,
+  800: #011648,
+  900: #010e37,
+  A100: #8297ff,
+  A200: #4f6aff,
+  A400: #1c3dff,
+  A700: #002eff,
+  contrast: (
+    50: mat.define-contrast(black, 0.87),
+    100: mat.define-contrast(black, 0.87),
+    200: mat.define-contrast(black, 0.87),
+    300: mat.define-contrast(white, 1),
+    400: mat.define-contrast(white, 1),
+    500: mat.define-contrast(white, 1),
+    600: mat.define-contrast(white, 1),
+    700: mat.define-contrast(white, 1),
+    800: mat.define-contrast(white, 1),
+    900: mat.define-contrast(white, 1),
+    A100: mat.define-contrast(black, 0.87),
+    A200: mat.define-contrast(white, 1),
+    A400: mat.define-contrast(white, 1),
+    A700: mat.define-contrast(white, 1),
+  )
+));
+
+// Create a custom theme with the primary palette
+$custom-theme: mat.define-light-theme((
+  color: (
+    primary: $custom-primary-palette,
+    accent: mat.define-palette(mat.$pink-palette, 200),
+    warn: mat.define-palette(mat.$red-palette),
+  )
+));
+
+// Apply the theme globally
+@include mat.all-component-themes($custom-theme);
+
+// Additional customization for primary buttons
+.mat-mdc-button.mat-mdc-button--primary {
+  background-color: #012169 !important;
+  color: white !important;
+  &:hover {
+    background-color: #011e5f !important;
+  }
+}
