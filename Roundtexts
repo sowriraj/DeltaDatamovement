@@ -1,0 +1,35 @@
+<mat-form-field appearance="outline" class="custom-search-box">
+  <mat-icon matPrefix>search</mat-icon>
+  <input matInput placeholder="Search" />
+</mat-form-field>
+
+
+/* Ensure the form field has rounded corners */
+.custom-search-box .mdc-notched-outline {
+  border-radius: 15px; /* Rounded corners */
+  border-color: white; /* Optional: White outline */
+}
+
+/* Style the input text */
+.custom-search-box .mat-mdc-form-field-infix {
+  padding: 0 12px; /* Add padding to fit the icon */
+}
+
+/* Style the prefix icon */
+.custom-search-box .mat-mdc-form-field-prefix {
+  display: flex;
+  align-items: center; /* Vertically align the icon */
+  color: white; /* Icon color */
+  margin-right: 8px; /* Add spacing between icon and text */
+}
+
+/* Ensure the input has proper text color */
+.custom-search-box .mat-mdc-form-field-infix input {
+  color: white; /* Input text color */
+}
+
+/* Adjust the outline gap for a cleaner look */
+.custom-search-box .mdc-notched-outline__notch {
+  border-radius: 15px; /* Match the outline's border radius */
+  background-color: transparent; /* Remove notch background */
+}
