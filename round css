@@ -1,0 +1,17 @@
+.custom-form-field {
+  border-radius: 25px; /* Rounds the corners */
+  background-color: white; /* Sets the background to white */
+}
+
+.custom-form-field.mat-form-field {
+  border-radius: 25px; /* Rounds the corners of the outline */
+}
+
+.custom-form-field .mat-form-field-outline {
+  border-radius: 25px; /* Rounds the outline border */
+}
+
+.custom-form-field .mat-form-field-outline-start,
+.custom-form-field .mat-form-field-outline-end {
+  border-color: white; /* Makes the border white */
+}
