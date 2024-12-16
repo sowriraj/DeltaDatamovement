@@ -1,40 +1,47 @@
+/* Styling for the mat-form-field containing the search input */
 .custom-form-field {
   width: 100%; /* Makes the form field take 100% of the container's width */
   height: 40px; /* Set the height of the form field */
-  border-radius: 25px; /* Rounds the corners of the form field */
-  background-color: transparent; /* Sets the background to transparent */
+  border-radius: 25px; /* Rounded corners for the form field */
+  background-color: transparent; /* Transparent background for the form field */
 }
 
+/* Outline styling for the input field */
 .custom-form-field .mat-form-field-outline {
-  border-radius: 25px; /* Rounds the outline border */
-  border: 2px solid white; /* Sets a white border color for the outline */
+  border-radius: 25px; /* Round the outline corners */
+  border: 2px solid white; /* White border for the outline */
 }
 
+/* Ensure the white border color on both ends of the outline */
 .custom-form-field .mat-form-field-outline-start,
 .custom-form-field .mat-form-field-outline-end {
-  border-color: white; /* Ensure the border color is white */
+  border-color: white;
 }
 
+/* Adjust the height of the input field and its padding */
 .custom-form-field .mat-form-field-infix {
-  height: 100%; /* Ensures the input field stretches to fill the form field */
-  padding-left: 20px; /* Adds left padding inside the input field */
+  height: 100%;
+  padding-left: 20px; /* Add left padding to the input field */
 }
 
+/* Styling the input field itself */
 .custom-form-field input {
-  height: 100%; /* Adjust the height of the input field */
-  padding: 0 12px; /* Adjust horizontal padding to fit the icon */
-  font-size: 14px; /* Control the font size */
-  border: none; /* Remove any border around the input field */
+  height: 100%; /* Make the input field fill the form field */
+  padding: 0 12px; /* Horizontal padding for the input field */
+  font-size: 14px; /* Font size for the input */
+  border: none; /* Remove the input border */
   outline: none; /* Remove any outline when the input is focused */
-  background-color: transparent; /* Ensures the input background is transparent */
+  background-color: transparent; /* Transparent background for the input */
 }
 
+/* Styling the button for the search icon */
 .custom-form-field button {
-  height: 100%; /* Makes the search button match the height of the input */
-  padding: 0; /* Remove padding to align the button properly */
-  margin-top: 0; /* Aligns the button properly with the input field */
+  height: 100%; /* Match the height of the search button to the input */
+  padding: 0;
+  margin-top: 0; /* Align the button properly with the input field */
 }
 
+/* Adjust size of the search icon */
 .custom-form-field .mat-icon {
-  font-size: 20px; /* Adjust the size of the search icon */
+  font-size: 20px; /* Size of the search icon */
 }
