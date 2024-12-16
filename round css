@@ -1,47 +1,47 @@
-/* Styling for the mat-form-field containing the search input */
+/* Custom styles for mat-form-field in MDC */
 .custom-form-field {
-  width: 100%; /* Makes the form field take 100% of the container's width */
-  height: 40px; /* Set the height of the form field */
-  border-radius: 25px; /* Rounded corners for the form field */
-  background-color: transparent; /* Transparent background for the form field */
+  width: 100%; /* Full width for the form field */
+  background-color: transparent; /* Transparent background */
+  padding: 0; /* Remove extra padding around the form field */
 }
 
-/* Outline styling for the input field */
-.custom-form-field .mat-form-field-outline {
-  border-radius: 25px; /* Round the outline corners */
-  border: 2px solid white; /* White border for the outline */
+/* Remove extra space inside the form field wrapper */
+.custom-form-field .mat-mdc-form-field-wrapper {
+  padding: 0 !important; /* Remove the padding inside the wrapper */
 }
 
-/* Ensure the white border color on both ends of the outline */
-.custom-form-field .mat-form-field-outline-start,
-.custom-form-field .mat-form-field-outline-end {
-  border-color: white;
+/* Customize the outline border for mat-mdc-form-field */
+.custom-form-field .mat-mdc-form-field-outline {
+  border-radius: 28px; /* Set border-radius to 28px */
+  border: 2px solid white !important; /* White border */
 }
 
-/* Adjust the height of the input field and its padding */
-.custom-form-field .mat-form-field-infix {
-  height: 100%;
-  padding-left: 20px; /* Add left padding to the input field */
+/* Customize the input field inside the form field */
+.custom-form-field .mat-mdc-form-field-infix {
+  background-color: transparent !important; /* Transparent background */
+  padding-left: 20px; /* Left padding to align the input with the icon */
+  height: 100%; /* Ensure the input takes full height */
 }
 
-/* Styling the input field itself */
+/* Input styling */
 .custom-form-field input {
-  height: 100%; /* Make the input field fill the form field */
-  padding: 0 12px; /* Horizontal padding for the input field */
-  font-size: 14px; /* Font size for the input */
-  border: none; /* Remove the input border */
-  outline: none; /* Remove any outline when the input is focused */
-  background-color: transparent; /* Transparent background for the input */
+  background-color: transparent !important; /* Transparent background for the input */
+  color: white; /* White text color */
+  border: none; /* Remove default border */
+  outline: none; /* Remove focus outline */
+  height: 100%; /* Fill the height of the form field */
+  padding-left: 20px; /* Padding for the input */
 }
 
-/* Styling the button for the search icon */
+/* Styling the search icon button */
 .custom-form-field button {
-  height: 100%; /* Match the height of the search button to the input */
+  height: 100%; /* Button should match the input height */
   padding: 0;
-  margin-top: 0; /* Align the button properly with the input field */
+  margin-top: 0;
 }
 
-/* Adjust size of the search icon */
+/* Style for the search icon */
 .custom-form-field .mat-icon {
-  font-size: 20px; /* Size of the search icon */
+  font-size: 20px; /* Icon size */
+  color: white; /* White color for the icon */
 }
