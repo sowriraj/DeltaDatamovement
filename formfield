@@ -1,0 +1,52 @@
+<mat-form-field appearance="outline" class="rounded-search-field">
+  <mat-icon matPrefix>search</mat-icon>
+  <input matInput placeholder="Search">
+  <button mat-icon-button matSuffix aria-label="Clear" (click)="clearSearch()">
+    <mat-icon>close</mat-icon>
+  </button>
+</mat-form-field>
+
+
+/* Style for the rounded outline container with reduced height */
+.rounded-search-field.mat-mdc-form-field {
+  border-radius: 25px; /* Rounded corners */
+  height: 36px; /* Adjust total height */
+  font-size: 14px; /* Adjust font size for compact input */
+  margin: 0; /* Remove any extra margins */
+}
+
+/* Remove unnecessary padding and wrapper spacing */
+.rounded-search-field .mat-mdc-text-field-wrapper {
+  padding: 0 8px; /* Minimal padding */
+  height: 100%; /* Match container height */
+  border-radius: 25px;
+  display: flex; /* Ensure elements align properly */
+  align-items: center;
+}
+
+/* Remove subscript space (for hints or error messages) */
+.rounded-search-field .mat-mdc-form-field-subscript-wrapper {
+  display: none; /* Hide subscript wrapper */
+}
+
+/* Input field adjustments */
+.rounded-search-field input {
+  line-height: normal; /* Reset line height */
+  padding: 0; /* Remove extra padding */
+  height: 100%; /* Stretch input to fill container */
+  margin: 0; /* Remove extra margin */
+}
+
+/* Adjust icons alignment */
+.rounded-search-field .mat-mdc-form-field-prefix .mat-icon,
+.rounded-search-field .mat-mdc-form-field-suffix .mat-icon {
+  font-size: 20px; /* Icon size */
+  color: #757575; /* Icon color */
+  margin: 0; /* Remove extra margin */
+}
+
+/* Hover effect for clear button */
+.rounded-search-field .mat-mdc-form-field-suffix button:hover {
+  background-color: rgba(0, 0, 0, 0.1); /* Light gray hover background */
+  border-radius: 50%; /* Circle hover effect */
+}
