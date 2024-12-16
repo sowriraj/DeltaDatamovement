@@ -15,3 +15,40 @@
 .custom-form-field .mat-form-field-outline-end {
   border-color: white; /* Makes the border white */
 }
+
+
+
+.custom-form-field {
+  border-radius: 25px; /* Rounds the corners of the form field */
+  background-color: white; /* Sets the background to white */
+  height: 40px; /* Adjust the height of the entire form field */
+}
+
+.custom-form-field .mat-form-field-outline {
+  border-radius: 25px; /* Rounds the outline border */
+}
+
+.custom-form-field .mat-form-field-outline-start,
+.custom-form-field .mat-form-field-outline-end {
+  border-color: white; /* Sets the border color to white */
+}
+
+.custom-form-field .mat-form-field-infix {
+  height: 100%; /* Ensures the input field stretches to fill the form field */
+}
+
+.custom-form-field input {
+  height: 100%; /* Adjust the height of the input field */
+  padding: 0 12px; /* Adjust horizontal padding to fit the icon */
+  font-size: 14px; /* Control the font size for a smaller input */
+}
+
+.custom-form-field button {
+  height: 100%; /* Makes the search button match the height of the input */
+  padding: 0; /* Remove padding to align the button perfectly */
+  margin-top: 0; /* Aligns the button properly with the input field */
+}
+
+.custom-form-field .mat-icon {
+  font-size: 20px; /* Adjust the size of the search icon */
+}
