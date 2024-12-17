@@ -1,0 +1,18 @@
+/* Adjust mat-form-field inside table cells */
+.custom-form-field {
+  display: flex; /* Minimize wrapper's impact */
+  width: 100%; /* Optional: Adjust as needed */
+  margin: 0; /* Remove default margins */
+  vertical-align: bottom; /* Align to the bottom of the table cell */
+}
+
+/* Adjust input field inside mat-form-field */
+.custom-form-field .mat-mdc-form-field-infix {
+  padding: 0; /* Remove padding around the input */
+  height: auto; /* Allow flexibility for alignment */
+}
+
+/* Align table cell content */
+.mat-mdc-table .mat-mdc-cell {
+  vertical-align: bottom; /* Ensure all content aligns to the bottom */
+}
