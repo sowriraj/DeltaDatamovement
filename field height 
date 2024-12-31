@@ -1,0 +1,21 @@
+::ng-deep .custom-dense-form-field .mat-form-field-infix {
+  height: 32px; /* Adjust height of the input area */
+}
+
+::ng-deep .custom-dense-form-field .mat-form-field-label {
+  font-size: 14px; /* Adjust label font size */
+  top: -8px; /* Adjust label's position */
+}
+
+::ng-deep .custom-dense-form-field .mat-input-element {
+  font-size: 14px; /* Adjust text size */
+}
+
+::ng-deep .custom-dense-form-field .mat-form-field-label {
+  transition: transform 0.2s ease-in-out;
+  transform: translateY(6px); /* Initial position of the label */
+}
+
+::ng-deep .custom-dense-form-field.mat-focused .mat-form-field-label {
+  transform: translateY(-20px); /* Floating label when focused */
+}
