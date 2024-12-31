@@ -1,0 +1,42 @@
+/* Remove unnecessary padding and margins for mat-form-field */
+::ng-deep .custom-input-field .mat-form-field-appearance-outline {
+  padding: 0 !important;  /* Remove any padding around the form field */
+  margin: 0 !important;   /* Remove any margin around the form field */
+}
+
+/* Adjust the padding of the mat-form-field-infix (input container) */
+::ng-deep .custom-input-field .mat-form-field-infix {
+  padding: 0px 8px !important;  /* Adjust horizontal padding for the input */
+  margin: 0 !important;         /* Remove margin around the input */
+}
+
+/* Adjust the position and size of the label */
+::ng-deep .custom-input-field .mat-form-field-label {
+  font-size: 14px !important;   /* Adjust font size if necessary */
+  padding: 0 !important;        /* Remove extra padding */
+  margin: 0 !important;         /* Remove margin */
+}
+
+/* Adjust the mat-input element (input field) */
+::ng-deep .custom-input-field .mat-input-element {
+  padding: 0px 8px !important;  /* Adjust horizontal padding for input text */
+  font-size: 14px !important;   /* Adjust font size */
+}
+
+/* Adjust the hint text (subscript) */
+::ng-deep .custom-input-field .mat-hint {
+  font-size: 12px !important;  /* Optional: adjust hint text size */
+  margin: 0px !important;      /* Remove margin */
+  padding: 0px !important;     /* Remove padding */
+}
+
+/* Adjust the border around the outline form field */
+::ng-deep .custom-input-field .mat-form-field-outline {
+  padding: 0px !important;  /* Adjust padding inside the outline */
+}
+
+/* Remove any error message spacing */
+::ng-deep .custom-input-field .mat-form-field-error {
+  margin: 0px !important;
+  padding: 0px !important;
+}
