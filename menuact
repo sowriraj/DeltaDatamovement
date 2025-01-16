@@ -1,0 +1,86 @@
+// sidebar.service.ts
+import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class SidebarService {
+  private activeUrl = new BehaviorSubject<string | null>(null);
+  activeUrl$ = this.activeUrl.asObservable();
+
+  setActiveUrl(url: string) {
+    this.activeUrl.next(url);
+  }
+
+  clearActiveUrl() {
+    this.activeUrl.next(null);
+  }
+}
+
+
+
+
+// top-header.component.ts
+import { Component } from '@angular/core';
+import { SidebarService } from '../services/sidebar.service';
+
+@Component({
+  selector: 'app-top-header',
+  template: `
+    <button (click)="clearSidebarActiveUrl()">Clear Active Link</button>
+  `,
+})
+export class TopHeaderComponent {
+  constructor(private sidebarService: SidebarService) {}
+
+  clearSidebarActiveUrl() {
+    this.sidebarService.clearActiveUrl();
+  }
+}
+
+
+
+
+// sidebar.component.ts
+import { Component, OnInit } from '@angular/core';
+import { SidebarService } from '../services/sidebar.service';
+
+@Component({
+  selector: 'app-sidebar',
+  template: `
+    <mat-nav-list>
+      <mat-list-item
+        *ngFor="let item of items"
+        [routerLink]="item.url"
+        [ngClass]="{ 'inactive': activeUrl !== item.url }"
+        (click)="setActiveUrl(item.url)"
+      >
+        {{ item.label }}
+      </mat-list-item>
+    </mat-nav-list>
+  `,
+  styleUrls: ['./sidebar.component.css'],
+})
+export class SidebarComponent implements OnInit {
+  items = [
+    { label: 'Home', url: '/home' },
+    { label: 'Profile', url: '/profile' },
+    { label: 'Settings', url: '/settings' },
+    { label: 'Logout', url: '/logout' },
+  ];
+
+  activeUrl: string | null = null;
+
+  constructor(private sidebarService: SidebarService) {}
+
+  ngOnInit() {
+    this.sidebarService.activeUrl$.subscribe((url) => {
+      this.activeUrl = url;
+    });
+  }
+
+  setActiveUrl(url: string) {
+    this.sidebarService.setActiveUrl(url);
+  }
+}
