@@ -1,0 +1,212 @@
+Here’s the Jira task acceptance criteria rewritten in the Scenario, Given, When, Then format:
+
+
+---
+
+Acceptance Criteria
+
+Frontend Tasks (Angular UI)
+
+1. Create UI for Adding New Records
+
+Scenario: User creates a new record.
+
+Given: The user has proper permissions to create a record and is on the "Create" form.
+
+When: The user fills in all required fields with valid data and clicks the "Save" button.
+
+Then: The record is saved in the database, and the UI refreshes to display the new record.
+
+And: A success message is displayed to the user.
+
+And: If the input is invalid, error messages are displayed for the invalid fields.
+
+
+
+
+2. Create UI for Updating Records
+
+Scenario: User updates an existing record.
+
+Given: The user has proper permissions to edit a record and clicks the "Edit" button for a specific record.
+
+When: The user modifies the fields and clicks the "Update" button.
+
+Then: The record is updated in the database, and the UI reflects the changes.
+
+And: A success message is displayed to the user.
+
+
+
+
+3. Create Delete Confirmation Dialog
+
+Scenario: User deletes a record.
+
+Given: The user has proper permissions to delete a record and clicks the "Delete" button.
+
+When: The user confirms the deletion in the confirmation dialog.
+
+Then: The record is deleted from the database, and the UI no longer displays it.
+
+And: A success message is displayed to the user.
+
+
+
+
+4. Role-Based Access Control for UI Actions
+
+Scenario: Role-based permissions for UI actions.
+
+Given: The user is logged in with a specific role.
+
+When: The user accesses the application.
+
+Then: The "Create," "Edit," and "Delete" buttons are only visible to authorized users.
+
+
+
+
+5. Add Success and Error Notifications
+
+Scenario: Notifications after a write operation.
+
+Given: The user performs a write operation (create, update, or delete).
+
+When: The operation is completed successfully or fails.
+
+Then: A success or error message is displayed, respectively.
+
+
+
+
+
+
+---
+
+Backend Tasks (.NET API)
+
+6. Implement POST Endpoint
+
+Scenario: API handles record creation.
+
+Given: The client sends a valid POST request to create a record.
+
+When: The API processes the request.
+
+Then: The record is created in the database, and a 201 Created response is returned.
+
+And: If the input is invalid, a 400 Bad Request response is returned with error details.
+
+
+
+
+7. Implement PUT Endpoint
+
+Scenario: API handles record updates.
+
+Given: The client sends a valid PUT request to update a record.
+
+When: The API processes the request.
+
+Then: The record is updated in the database, and a 200 OK response is returned.
+
+And: If the record does not exist, a 404 Not Found response is returned.
+
+
+
+
+8. Implement DELETE Endpoint
+
+Scenario: API handles record deletion.
+
+Given: The client sends a valid DELETE request for an existing record.
+
+When: The API processes the request.
+
+Then: The record is removed from the database, and a 204 No Content response is returned.
+
+And: If the record does not exist, a 404 Not Found response is returned.
+
+
+
+
+9. Secure Write Endpoints
+
+Scenario: API enforces security for write operations.
+
+Given: An unauthorized or unauthenticated user attempts to perform a write operation.
+
+When: The API receives the request.
+
+Then: A 401 Unauthorized or 403 Forbidden response is returned.
+
+
+
+
+10. Add Logging for Write Operations
+
+
+
+Scenario: Write operations are logged.
+
+Given: A user performs a Create, Update, or Delete operation.
+
+When: The operation is processed by the API.
+
+Then: The operation details (e.g., user, timestamp, operation type) are logged using Splunk.
+
+
+
+
+---
+
+Testing Tasks
+
+11. Write Unit Tests for Angular Components
+
+
+
+Scenario: Validate Angular component behavior.
+
+Given: The application is tested using a testing framework (e.g., Jasmine or Karma).
+
+When: Unit tests are executed.
+
+Then: All components achieve at least 80% test coverage.
+
+
+
+12. Write Unit Tests for .NET API Endpoints
+
+
+
+Scenario: Validate API endpoints.
+
+Given: The API endpoints are tested using a testing framework (e.g., xUnit or NUnit).
+
+When: Unit tests are executed.
+
+Then: All write endpoints achieve at least 80% test coverage.
+
+
+
+13. Conduct Integration Testing
+
+
+
+Scenario: Verify end-to-end write operations.
+
+Given: The Angular UI, .NET API, and database are deployed in a test environment.
+
+When: Integration tests are executed.
+
+Then: All workflows for create, update, and delete operations pass successfully.
+
+
+
+
+---
+
+This format aligns with Jira's need for clarity while keeping the user stories actionable and testable!
+
