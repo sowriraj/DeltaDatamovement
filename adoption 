@@ -1,0 +1,45 @@
+OpenShift Container Adoption
+
+Technology Stack
+
+Angular UI, .NET Core API, Oracle Database
+
+SSO Login, Friendly URLs
+
+
+Key Features
+
+Routing: Ingress & SSL Routes with Certificate Manager
+
+CI/CD: S2I Builds, Jenkins Pipelines with Ansible Playbooks
+
+Monitoring & Logging: Dynatrace for performance, Splunk for logs
+
+
+Benefits
+
+Scalable, secure, and automated deployments
+
+Faster delivery with streamlined pipelines
+
+Real-time monitoring and centralized log analysis
+
+
+Workflow
+
+1. Develop Angular & .NET Core API
+
+
+2. Automate builds and deployments via OpenShift
+
+
+3. Secure traffic with SSL routes
+
+
+4. Monitor with Dynatrace & analyze logs with Splunk
+
+
+
+Impact
+
+Improved performance, security, and operational efficiency
