@@ -1,0 +1,50 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
+
+class Program
+{
+    static void Main()
+    {
+        // Sample JSON data with errorComment field
+        string json = @"[
+            {""ticket"": 1, ""status"": ""success"", ""errorComment"": ""Processed correctly""},
+            {""ticket"": 1, ""status"": ""failure"", ""errorComment"": ""Network error""},
+            {""ticket"": 2, ""status"": ""success"", ""errorComment"": ""Completed""},
+            {""ticket"": 3, ""status"": ""failure"", ""errorComment"": ""Timeout occurred""}
+        ]";
+
+        // Deserialize JSON into a list of Ticket objects
+        List<Ticket> tickets = JsonConvert.DeserializeObject<List<Ticket>>(json);
+
+        // Process tickets to ensure unique ticket numbers with proper status and merged error comments
+        var processedTickets = tickets
+            .GroupBy(t => t.TicketNumber)
+            .Select(g =>
+            {
+                var statuses = g.Select(t => t.Status).Distinct();
+                string finalStatus = statuses.Contains("success") && statuses.Contains("failure") ? "partial" : statuses.First();
+                string mergedErrorComment = string.Join("; ", g.Select(t => t.ErrorComment).Distinct());
+
+                return new Ticket { TicketNumber = g.Key, Status = finalStatus, ErrorComment = mergedErrorComment };
+            })
+            .ToList();
+
+        // Convert back to JSON
+        string updatedJson = JsonConvert.SerializeObject(processedTickets, Formatting.Indented);
+        Console.WriteLine(updatedJson);
+    }
+
+    class Ticket
+    {
+        [JsonProperty("ticket")]
+        public int TicketNumber { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("errorComment")]
+        public string ErrorComment { get; set; }
+    }
+}
