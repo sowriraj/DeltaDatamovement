@@ -1,0 +1,54 @@
+Problem Description
+
+In the current internal website, users need to manually navigate to the ARM portal to raise a ticket for "Revoke" and "Reinstate" actions in the Access Check module. This process is time-consuming, requires multiple steps, and disrupts the user workflow. Additionally, manually raising tickets can lead to errors, delays, and inefficiencies in access management.
+
+Proposed Solution
+
+Integrate the ARM ticket creation process directly into the Access Check module of the internal website. When a user clicks the Revoke or Reinstate button, the application will automatically generate and submit an ARM ticket in the background without requiring manual intervention in the ARM portal.
+
+Implementation Approach
+
+1. UI Enhancement
+
+Add "Revoke" and "Reinstate" buttons in the Access Check module.
+
+Provide a confirmation popup before triggering the request.
+
+
+
+2. Backend Integration
+
+Develop an API that communicates with the ARM system to create tickets programmatically.
+
+The API should handle necessary authentication and authorization.
+
+Capture and store ticket details such as ticket ID, status, and timestamps.
+
+
+
+3. Workflow Automation
+
+When a user clicks the button, the system should:
+
+Validate user permissions.
+
+Collect required details for the ticket.
+
+Submit a request to the ARM system via API.
+
+Update the UI with the ticket status.
+
+
+
+
+4. Logging and Notifications
+
+Log all ticket creation attempts for auditing.
+
+Notify users via email or UI notification once the ticket is raised.
+
+
+
+
+This solution will streamline the ticketing process, improve efficiency, and enhance user experience by reducing manual efforts.
+
