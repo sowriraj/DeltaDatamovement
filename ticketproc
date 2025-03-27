@@ -1,0 +1,83 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+
+class Program
+{
+    static void Main()
+    {
+        // Sample XML Input
+        string xmlData = @"
+        <tickets>
+            <ticket>
+                <id>1</id>
+                <status>success</status>
+                <errorComment>Processed correctly</errorComment>
+            </ticket>
+            <ticket>
+                <id>1</id>
+                <status>failure</status>
+                <errorComment>Network error</errorComment>
+            </ticket>
+            <ticket>
+                <id>2</id>
+                <status>success</status>
+                <errorComment>Completed</errorComment>
+            </ticket>
+            <ticket>
+                <id>3</id>
+                <status>failure</status>
+                <errorComment>Timeout occurred</errorComment>
+            </ticket>
+        </tickets>";
+
+        // Parse XML into XDocument
+        XDocument doc = XDocument.Parse(xmlData);
+
+        // Extract tickets as a list
+        List<Ticket> tickets = doc.Descendants("ticket")
+            .Select(t => new Ticket
+            {
+                Id = int.Parse(t.Element("id").Value),
+                Status = t.Element("status").Value,
+                ErrorComment = t.Element("errorComment")?.Value ?? string.Empty
+            }).ToList();
+
+        // Process tickets - group by ID and update status & error comments
+        var processedTickets = tickets
+            .GroupBy(t => t.Id)
+            .Select(g =>
+            {
+                var statuses = g.Select(t => t.Status).Distinct();
+                string finalStatus = statuses.Contains("success") && statuses.Contains("failure") ? "partial" : statuses.First();
+                string mergedErrorComment = string.Join("; ", g.Select(t => t.ErrorComment).Distinct());
+
+                return new Ticket { Id = g.Key, Status = finalStatus, ErrorComment = mergedErrorComment };
+            })
+            .ToList();
+
+        // Create updated XML
+        XDocument updatedXml = new XDocument(
+            new XElement("tickets",
+                processedTickets.Select(t =>
+                    new XElement("ticket",
+                        new XElement("id", t.Id),
+                        new XElement("status", t.Status),
+                        new XElement("errorComment", t.ErrorComment)
+                    )
+                )
+            )
+        );
+
+        // Output updated XML
+        Console.WriteLine(updatedXml);
+    }
+
+    class Ticket
+    {
+        public int Id { get; set; }
+        public string Status { get; set; }
+        public string ErrorComment { get; set; }
+    }
+}
