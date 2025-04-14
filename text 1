@@ -1,0 +1,119 @@
+Got it! Here's a clear Epic Design, broken down with description, features, and acceptance criteria for your internal integrated website release — including moving from dark to production and OpenShift vulnerability fixes.
+
+
+---
+
+Epic Title:
+
+Release Internal Integrated Web Portal to Production with Vulnerability Fixes
+
+
+---
+
+Epic Description:
+
+This epic focuses on releasing the internal integrated web portal from dark launch to full production. It includes enabling all integrated internal applications for end-users and addressing container-level vulnerabilities in the OpenShift deployment environment. The release must ensure stability, security, and readiness for production use.
+
+
+---
+
+Key Features/Stories in the Epic:
+
+1. Dark Launch Verification
+
+Validate integrated app performance and user flows in the dark environment.
+
+Collect internal feedback before going live.
+
+
+
+2. Security Fixes Implementation
+
+Address OpenShift container vulnerabilities (e.g., CVEs, outdated libraries).
+
+Apply best practices for container hardening.
+
+
+
+3. CI/CD Readiness
+
+Ensure pipelines are updated to deploy secure, verified builds to production.
+
+
+
+4. Monitoring & Alerts Setup
+
+Ensure all services have logs and health monitoring configured pre-prod.
+
+
+
+5. Production Release
+
+Enable all integrated applications for production use.
+
+Ensure rollback strategy is in place.
+
+
+
+
+
+---
+
+Acceptance Criteria (Given–When–Then):
+
+1. Dark Launch Completion
+
+Given the integrated internal site is dark-launched
+
+When it is accessed by internal users
+
+Then all apps must load correctly, and no critical issues should be reported
+
+
+
+2. Security Fixes Applied
+
+Given known OpenShift container vulnerabilities
+
+When the updated images are built and deployed
+
+Then no critical or high vulnerabilities should remain as per latest scan
+
+
+
+3. Monitoring & Logging
+
+Given the site is moving to production
+
+When any service fails or logs errors
+
+Then alerts should be triggered and logs should be visible in centralized logging
+
+
+
+4. Production Deployment
+
+Given dark launch feedback is addressed
+
+When the production toggle is turned on
+
+Then all internal users should access the portal without issue
+
+
+
+5. Rollback Plan
+
+Given the production deployment fails
+
+When rollback is triggered
+
+Then the system should return to its last stable state with minimal disruption
+
+
+
+
+
+---
+
+Would you like me to break this down into individual JIRA stories or give you a Confluence-ready format?
+
