@@ -1,0 +1,25 @@
+SELECT 
+    a.OBJECT_NAME AS ProcedureName,
+    LISTAGG(a.ARGUMENT_NAME, ', ') WITHIN GROUP (ORDER BY a.ARGUMENT_NAME) AS OutParams
+FROM 
+    ALL_ARGUMENTS a
+WHERE 
+    a.POSITION IS NOT NULL
+    AND a.IN_OUT IN ('OUT', 'IN/OUT')
+    AND a.OBJECT_NAME IN (
+        SELECT s.NAME
+        FROM ALL_SOURCE s
+        WHERE s.TYPE = 'PROCEDURE'
+        GROUP BY s.NAME
+        HAVING COUNT(CASE 
+                     WHEN UPPER(s.TEXT) LIKE '%INSERT%' OR 
+                          UPPER(s.TEXT) LIKE '%UPDATE%' OR 
+                          UPPER(s.TEXT) LIKE '%DELETE%' OR 
+                          UPPER(s.TEXT) LIKE '%MERGE%' 
+                     THEN 1 
+                     END) = 0
+    )
+GROUP BY 
+    a.OBJECT_NAME
+ORDER BY 
+    a.OBJECT_NAME;
